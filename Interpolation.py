@@ -125,7 +125,7 @@ class Interpolation:
         return interpolatedTable
     
     # Takes a 2 dimensional array of points with at least 4 values and fills in the missing values by Clough Tocher 2D interpolation
-    def ScatteredBicubicInterpolation(tableOfValues):
+    def ScatteredBicubicInterpolation(tableOfValues, colMax, rowMax):
         points = []
         values = []
         rowCount = -1
@@ -138,19 +138,24 @@ class Interpolation:
                 if(str(element).strip() != ''):
                     points.append((float(columnCount), float(rowCount)))
                     values.append(float(element))
+        if (len(values) < 0):
+            print ("Can't perform an interpolation if no values are entered.")
+            return
+        maxValue = max(values)
+        
 
         # Check to see if there is enough information to construct initial simplex.
-        if (str(tableOfValues[0][0]).strip()==''):
+        if ((0, 0) not in points):
             points.append((-1,-1))
             values.append(0)
-        if (str(tableOfValues[0][columnCount]).strip()==''):
-            points.append((-1,columnCount+1))
+        if ((0, rowMax-1) not in points):
+            points.append((-1,rowMax))
             values.append(0)
-        if (str(tableOfValues[rowCount][0]).strip()==''):
-            points.append((rowCount+1,-1))
+        if ((colMax-1,0) not in points):
+            points.append((colMax,-1))
             values.append(0)
-        if (str(tableOfValues[rowCount][columnCount]).strip()==''):
-            points.append((rowCount+1,columnCount+1))
+        if ((colMax-1, rowMax-1) not in points):
+            points.append((colMax,rowMax))
             values.append(0)
 
         # Create an interpolator for all points.
@@ -158,19 +163,15 @@ class Interpolation:
 
         # For each blank element in array, calculate value from interpolator.
         interpolatedTable = []
-        rowCount = -1
-        for row in tableOfValues:
-            newRow = []
-            rowCount += 1
-            columnCount = -1
-            for element in row:
-                columnCount += 1
-                if(str(element).strip() == ''):
-                    newRow.append(float(interp(rowCount, columnCount)))
-                else:
-                    newRow.append(element)
-            interpolatedTable.append(newRow)
-        
+        for row in range(rowMax):
+            interpolatedTable.append([])
+            for column in range(colMax):
+                newValue = float(interp(column, row))
+                if (newValue < 0):
+                    newValue = 0
+                if (newValue > maxValue):
+                    newValue = maxValue
+                interpolatedTable[row].append(newValue)
         return interpolatedTable
 
         # 
