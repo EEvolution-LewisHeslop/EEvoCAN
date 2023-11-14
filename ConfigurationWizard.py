@@ -50,19 +50,19 @@ class ParameterTab(customtkinter.CTkScrollableFrame):
         super().__init__(master)
 
         # Create the Temperature Range Frame for Charging
-        self.temperatureRangeFrame = TemperatureRangeFrame(self, "Temperature Range for Charging", True)
+        self.temperatureRangeFrame = TemperatureRangeFrame(self, "Temperature Range for Charging (degC)", True)
         self.temperatureRangeFrame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
         # Create the SoC Range Frame for Charging
-        self.socRangeFrame = SocRangeFrame(self, "SoC Range for Charging", True)
+        self.socRangeFrame = SocRangeFrame(self, "SoC Range for Charging (%)", True)
         self.socRangeFrame.grid(row=1, column=0, padx=5, pady=(0,5), sticky="nsew")
 
         # Create the Temperature Range Frame for Discharging
-        self.temperatureRangeFrame = TemperatureRangeFrame(self, "Temperature Range for Discharging", False)
+        self.temperatureRangeFrame = TemperatureRangeFrame(self, "Temperature Range for Discharging (degC)", False)
         self.temperatureRangeFrame.grid(row=2, column=0, padx=5, pady=(0,5), sticky="nsew")
 
         # Create the SoC Range Frame for Discharging
-        self.socRangeFrame = SocRangeFrame(self, "SoC Range for Discharging", False)
+        self.socRangeFrame = SocRangeFrame(self, "SoC Range for Discharging (%)", False)
         self.socRangeFrame.grid(row=3, column=0, padx=5, pady=(0,5), sticky="nsew")
 
         # Create the voltage range frame
@@ -439,13 +439,17 @@ class SlaveBoardFrame(customtkinter.CTkFrame):
         self.resolutionEntryBox.grid(row=1, column=1, pady=5, sticky="e")
 
         # Create the slave cellcount table frame
-        self.tableFrame = customtkinter.CTkScrollableFrame(self, orientation="horizontal", height=30)
+        self.tableFrame = customtkinter.CTkScrollableFrame(self, orientation="horizontal", height=60)
         self.tableFrame.grid(row=2, column=0, columnspan=4, padx=5, pady=(0,5), sticky="new")
+
+        # Create the slave cellcount table header
+        self.slaveCellCountHeader = customtkinter.CTkLabel(master=self.tableFrame, text="Cells per Slave")
+        self.slaveCellCountHeader.grid(row=0, column=0, padx=5, sticky="w")
 
         # Create the slave cellcount table
         value = [[11, 12, 11, 12, 11, 12, 11, 12, 11, 12]]
         self.table = CTkTable(master=self.tableFrame, values=value, write=True, hover_color="green", width=40)
-        self.table.grid(row=0, column=0)
+        self.table.grid(row=1, column=0)
 
         # Create the resize button
         self.resizeButton = customtkinter.CTkButton(self, text="Resize", command=lambda:self.table.configure(columns=int(self.textVariable.get()), width=40))
@@ -471,7 +475,7 @@ class VoltageRangeFrame(customtkinter.CTkFrame):
         
         # Create the frame heading.
         self.configure(fg_color="darkslategray", corner_radius=6)
-        self.frameHeading = customtkinter.CTkLabel(self, text="Voltage Range", corner_radius=6)
+        self.frameHeading = customtkinter.CTkLabel(self, text="Voltage Range (V)", corner_radius=6)
         self.frameHeading.grid(row=0, column=0, columnspan=2, pady=5, sticky="w")
 
         # Create the resolution entry label
