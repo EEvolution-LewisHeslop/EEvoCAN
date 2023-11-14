@@ -88,6 +88,7 @@ class HwManager():
 
     # Thread that calls find_devices every half a second.
     def background_searcher(self):
+        print("New background searcher created.")
         while(self.searching):            
             self.find_devices()
             time.sleep(0.5)

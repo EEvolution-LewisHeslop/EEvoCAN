@@ -5,6 +5,7 @@ import customtkinter
 import threading
 import time
 
+import FrameBuilder
 from BasicComms import BasicTab
 from ConfigurationWizard import ConfigurationTab
 from SoftwareLoader import SoftwareTab
@@ -62,17 +63,23 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
     def device_table_updater(self):
         i = 0
         while (True):
-            i += 1
-            deviceList = hwManager.get_devices()
-            deviceText = ""
-            if (deviceList):
-                for device in deviceList:
-                    deviceText += f"{device}, {i}\n"
-                self.device_list.configure(text=deviceText)
-            else:
-                i = 0
-                self.device_list.configure(text="No devices.")
-            time.sleep(0.5)
+            try:
+                i += 1
+                deviceList = hwManager.get_devices()
+                deviceText = ""
+                if (deviceList):
+                    for device in deviceList:
+                        deviceText += f"{device}, {i}\n"
+                    self.device_list.configure(text=deviceText)
+                else:
+                    i = 0
+                    self.device_list.configure(text="No devices.")
+                time.sleep(0.5)
+            except:
+                print("Failed to update device list.")
+                for thread in threading.enumerate(): 
+                    print(thread.name)
+                return
 
 ### Main Tab View ###
 
@@ -84,33 +91,9 @@ class MainTabView(customtkinter.CTkTabview):
             super().__init__(master)
 
             # Build the tabs
-            tab_1 = self.add("Basic Comms")
-            tab_2 = self.add("Configuration Wizard")
-            tab_3 = self.add("Software Loader")
-            
-            # Expand the main area of the tabs.
-            tab_1.grid_columnconfigure(0, weight=1)
-            tab_1.grid_rowconfigure(0, weight=1)
-            tab_2.grid_columnconfigure(0, weight=1)
-            tab_2.grid_rowconfigure(0, weight=1)
-            tab_3.grid_columnconfigure(0, weight=1)
-            tab_3.grid_rowconfigure(0, weight=1)
-
-            # Build the tab content
-            self.basicCommsTab = BasicTab(tab_1)
-            self.basicCommsTab.grid(row=0, column=0, sticky="nsew")
-            self.configurationTab = ConfigurationTab(tab_2)
-            self.configurationTab.grid(row=0, column=0, sticky="nsew")
-            self.softwareTab = SoftwareTab(tab_3)
-            self.softwareTab.grid(row=0, column=0, sticky="nsew")
-
-            # Expand the tab content.
-            self.basicCommsTab.grid_columnconfigure(0, weight=1)
-            self.basicCommsTab.grid_rowconfigure(0, weight=1)
-            self.configurationTab.grid_columnconfigure(0, weight=1)
-            self.configurationTab.grid_rowconfigure(0, weight=1)
-            self.softwareTab.grid_columnconfigure(0, weight=1)
-            self.softwareTab.grid_rowconfigure(0, weight=1)
+            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab)
+            FrameBuilder.tab_builder(self, title="Configuration Wizard", tabContent=ConfigurationTab)
+            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab)
 
             # Select the 2nd tab
             self.set("Configuration Wizard")
