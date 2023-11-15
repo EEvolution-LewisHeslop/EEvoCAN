@@ -166,7 +166,7 @@ class Interpolation:
         for row in range(rowMax):
             interpolatedTable.append([])
             for column in range(colMax):
-                newValue = float(interp(column, row))
+                newValue = float("{:.3f}".format(float(interp(column, row))))
                 if (newValue < 0):
                     newValue = 0
                 if (newValue > maxValue):

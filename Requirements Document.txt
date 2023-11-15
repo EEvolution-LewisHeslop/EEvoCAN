@@ -1,0 +1,59 @@
+EEvoCAN Requirements Document
+
+What we are building:
+We are building an application for interfacing and configuring our next generation BMS.
+What it needs to be able to do:
+Must Haves
+-	Ability to create and download new configurations to the BMS.
+	-	Parameters for battery configuration
+	-	Derate table generation / visualization
+-	Ability to read and monitor data and faults reported by the BMS.
+-	Support for a number of different CAN hardware devices (IXXAT, PCAN, KVASER)
+Nice To Haves
+-	A command line to directly interface with the battery.
+-	A TCP/IP interface to allow for the tool to be used as a communication layer in another application.
+The technologies we are using:
+Language:		Python 3.12
+Important Libraries:	Python-CAN – Supports basic functionality for many CAN hardware devices.
+ 			CANopen for Python – Implements CANopen protocol on top of Python-CAN
+ 			CustomTkinter – Allows for the creation of an elegant and modern GUI.
+ 			matplotlib – Allows for the visualization of data and tables in 2D and 3D.
+How it will look:
+There are no specific requirements on how the application should look at this time, only that there should be plots of important lookup tables such as the derate and charge tables so it can be seen at a glance if there are any issues.
+The standards we will hold ourselves to:
+In terms of code conformity, we will make our best efforts to follow the guidelines for coding conventions provided by PEP 8 which can be found here.
+Because we are creating a complex Tkinter UI we will follow the convention that all Frames and Windows will have their own Class if their child elements count exceeds 2.
+How to setup a development environment:
+To set up the development environment, it is recommended to use Visual Studio Code for the tight Python integration:
+1.	Install the latest version of Python, at least 3.12, and ensure that the PATH environment variables are properly setup during installation.
+2.	Install the Python extension for VS Code.
+3.	Within VS Code, clone the repository for the tool.
+4.	With the repository cloned, create a python virtual environment:
+a.	Ctrl+Shift+P opens the command palette
+b.	Type “create”.
+c.	Select “create environment”.
+d.	Select “venv”
+e.	Select your Python interpreter.
+f.	Select the requirements.txt for dependencies to install.
+g.	Wait while VS code completes the creation of your virtual environment with all required packages installed. This may take a while, the application is approximately 300MB at time of writing.
+5.	Launch configuration is already set to open EEvoCAN.py by default, so you can now run the application with or without debugging.
+6.	At this point it would be wise to save the workspace for easier access in the future.
+How we will implement the requirements:
+Supporting Multiple Hardware Devices
+The Python-CAN library gives us a lot of useful ground-work however it expects to be used with a single known type of hardware device at one time. This means that we must build a hardware monitoring class that can detect when devices are added or removed and instantiate or destroy instances of the Bus class when detected. The active bus classes should be made accessible to any class that requires CAN comms. Generally speaking, whatever device was last connected should be preferred by any newly created, comm-requiring class.
+Creating New Configuration Files
+We will support the creation of new configuration files with a wizard style system.
+The wizard will present 3 tabs: Parameters, Derate Charge, Derate Discharge.
+Once all 3 tabs have been completed, a new configuration binary can be created.
+The parameter tab will contain all of the required parameters in a straightforward system and will also provide an “Optional Parameters” input box at the bottom. The “Optional Parameters” input box will accept JSON parameter objects (format tbc) which can later be interpreted by the application when creating the binary.
+The derate tabs will contain tables for inputting derate data. There are custom widgets for CustomTkinter such as CTkTable which can be used to produce dynamic tables. We will allow the user to create resizable temperature and soc range tables and use the length of those to create the 2d derate tables. We will allow the user to enter any number of manual entries in their tables and provide an “interpolate” function, which will freeze user entries and interpolate remaining entries, providing that the maximum and minimum values are at least provided (4-corners).
+Modifying Existing Configurations
+We will later support the modification of existing configurations. 
+This will be achieved in two ways. 
+First, an existing configuration binary can be used to populate the wizard and the values can then be modified by the user at will. If all parameters and tables are complete, a new binary can be created.
+Second, when an EDS file exists for the module, a treeview system will be created to allow the EDS to be edited.
+Reading and monitoring data and faults reported by the BMS.
+The main application window will feature a field displaying filtered CAN data from attached devices and a secondary interpretation window which will show the interpreted values based on a loaded DBC file. Python-CAN already does a lot of hard work for us; it supports filtering and even has examples for CAN logging.
+Command line for directly interfacing with the battery.
+The main application window will feature a command line for communicating with attached devices. There will be information about which device will be used, and a list of nodes present on the device network. Python-CAN already does a lot of hard work for us; however as far as is known, there is no built-in callback registering, and that will have to be created to allow the user to subscribe to events for example.
+

@@ -13,8 +13,6 @@ class ConfigurationTab(customtkinter.CTkFrame):
         self.tabView = ConfigurationTabView(self)
         self.tabView.grid(row=0, column=0, sticky="nsew")
 
-### Configuration Tab View ###
-
 # Creates the ConfigurationTabView which holds the various configuration tabs of the application.
 class ConfigurationTabView(customtkinter.CTkTabview):
     # Builds the tabview and starts any GUI updaters for the tabs.
