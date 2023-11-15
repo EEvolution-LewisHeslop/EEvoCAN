@@ -28,7 +28,7 @@ class App(customtkinter.CTk):
         self.grid_rowconfigure(1, weight=1)
 
         # Create the tabview
-        self.tabView = MainTabView(self)
+        self.tabView = MainTabView(self, hwManager)
         self.tabView.grid(row=0, rowspan=2, column=1, padx=(0,20), pady=(0,20), sticky="nsew")
 
         # Populate the window
@@ -86,14 +86,14 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
 # Creates the Main Tabview which holds the various main tabs of the application.
 class MainTabView(customtkinter.CTkTabview):
     # Builds the tabview and starts any GUI updaters for the tabs.
-    def __init__(self, master):
+    def __init__(self, master, hwManager: HwManager):
             # Create the tabview
             super().__init__(master)
 
             # Build the tabs
             FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab)
             FrameBuilder.tab_builder(self, title="Configuration Wizard", tabContent=ConfigurationTab)
-            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab)
+            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab, hwManager=hwManager)
 
             # Select the 2nd tab
             self.set("Configuration Wizard")
