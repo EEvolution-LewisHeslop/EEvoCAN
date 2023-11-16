@@ -59,22 +59,22 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
         # Start the list updater thread
         threading.Thread(target=self.device_table_updater, daemon=True).start()
 
-    # The thread that updates the device table when devices are plugged in or added.
+    # The thread that updates the device table every 1s
     def device_table_updater(self):
         i = 0
         while (True):
             try:
                 i += 1
-                deviceList = hwManager.get_devices()
+                devices = hwManager.get_devices()
                 deviceText = ""
-                if (deviceList):
-                    for device in deviceList:
-                        deviceText += f"{device}, {i}\n"
+                if (devices):
+                    for device in devices:
+                        deviceText += f"{device.get('serial_number')}, {i}\n"
                     self.device_list.configure(text=deviceText)
                 else:
                     i = 0
                     self.device_list.configure(text="No devices.")
-                time.sleep(0.5)
+                time.sleep(1)
             except:
                 print("Failed to update device list.")
                 for thread in threading.enumerate(): 
