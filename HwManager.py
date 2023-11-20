@@ -27,8 +27,8 @@ logger.addFilter(IgnoreShutdownWarningFilter())
 class HwManager():
     searching = True
     availableDeviceTypes = []
-    activeDevices = []
-    activeCanopenNetworks = []
+    activeDevices:list[dict] = []
+    activeCanopenNetworks:list[Network] = []
 
     # Initialises a new hardware manager.
     def __init__(self):
@@ -70,23 +70,6 @@ class HwManager():
         
         return foundDeviceTypes
 
-    # Sends a message on the last connnected device.
-    def send_message(self):
-        if (len(self.activeBuses) > 0):
-            # Use the first device in the list to send a message.
-            bus: can.Bus = self.activeBuses[0]
-            msg = can.Message(
-            arbitration_id=0xC0FFEE,
-            data=[0, 25, 0, 1, 3, 1, 4, 1],
-            is_extended_id=True)
-            try:
-                bus.send(msg)
-            except can.CanError:
-                print("Message NOT sent")
-                print(f"Message sent on {self.deviceIds[0]} device.")
-        else:
-            print("No device to send message.")
-
     # Returns the current list of devices.
     def get_devices(self):
         return self.activeDevices
@@ -107,12 +90,12 @@ class HwManager():
     def update_devices(self):
         # Foreach avaibable device type, try to find new devices.
         print("Searching for devices.")
-        detected_devices = []
+        detected_devices:list[dict] = []
         if ("ixxat" in self.availableDeviceTypes):
-            ixxat_devices = self.find_devices_generic("ixxat", 10)
+            ixxat_devices:list[dict] = self.find_devices_generic("ixxat", 10)
             detected_devices.extend(ixxat_devices)
         if ("kvaser" in self.availableDeviceTypes):
-            kvaser_devices = self.find_devices_generic("kvaser", 10)
+            kvaser_devices:list[dict] = self.find_devices_generic("kvaser", 10)
             # Ignore virtual device(s).
             kvaser_devices = [device for device in kvaser_devices if device.get('serial_number') is not None]
             detected_devices.extend(kvaser_devices)
@@ -121,8 +104,10 @@ class HwManager():
             if device['serial_number'] not in [d['serial_number'] for d in self.activeDevices]:
                 self.activeDevices.append(device)
                 # Create and add new CANopen network
-                network = Network(device.get('bus'))
+                deviceBus:can.BusABC = device.get('bus')
+                network = Network(deviceBus)
                 self.activeCanopenNetworks.append((network, device.get('serial_number')))
+                print(f"Added device {device.get('serial_number')}: {deviceBus.channel_info}")
 
         # If any devices have been unplugged since last time, remove them.
         self.remove_disconnected_devices(detected_devices)
@@ -143,20 +128,18 @@ class HwManager():
                 self.shutdown_network(network)
             for device in devicesToShutdown:
                 self.shutdown_device(device)
-            # self.activeCanopenNetworks = [network for network in self.activeCanopenNetworks if network[1] not in disconnected_serial_numbers]
-            # self.activeDevices = [device for device in self.activeDevices if device.get('serial_number') not in disconnected_serial_numbers]
+                bus:can.BusABC = device.get('bus')
+                print(f"Removed device {device.get('serial_number')}: {bus.channel_info}")
     
     # Removes the device from the device list, TODO, any other cleanup required.
     def shutdown_network(self, network):
         self.activeCanopenNetworks.remove(network)
-        print("Shutting down network.")
 
     # Removes the device from the device list, TODO, any other cleanup required.
     def shutdown_device(self, device_to_remove):
         if device_to_remove:
             # Remove the bus from active buses
             self.activeDevices.remove(device_to_remove)
-            print("Shutting down device.")
 
     # A method finding buses based on a given interfacetype. Because not all buses are structured the same, there are some configurations to do
     def find_devices_generic(self, interface_type, max_channels, **kwargs):
@@ -180,23 +163,27 @@ class HwManager():
         for channel in range(max_channels):
             try:
                 bus = None
+                id_value = None
                 with BusClass(channel=channel, **kwargs) as bus:
                     id_value = get_nested_attr(bus, busIdAttr, None)
                     if id_value and hasattr(id_value, 'decode'):
                         id_value = id_value.decode('ascii')  # decode if it's bytes
-                    detected_devices.append({
-                        'channel': channel,
-                        'serial_number': id_value,
-                        'bus': bus,
-                        'bustype': interface_type
-                    })
+                defaultBitrate = 500000
+                bus = can.interface.Bus(interface=interface_type, channel=channel, bitrate=defaultBitrate)
+                bus.channel_info = f"interface_type={interface_type}, channel={channel}, bitrate={defaultBitrate}Kb/s"
+                detected_devices.append({
+                    'channel': channel,
+                    'serial_number': id_value,
+                    'bus': bus,
+                    'bustype': interface_type
+                })
             except can.CanError:
                 continue
 
         return detected_devices
 
 # Helper for getting attributes that are deeply nested    
-def get_nested_attr(obj, attr_path, default=None):
+def get_nested_attr(obj, attr_path:str, default=None):
     try:
         for attr in attr_path.split('.'):
             obj = getattr(obj, attr)

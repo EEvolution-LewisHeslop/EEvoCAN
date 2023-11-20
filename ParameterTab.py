@@ -111,7 +111,7 @@ class SimpleParamsFrame(customtkinter.CTkFrame):
             "Customer Discharging Current Limit (A)": (customtkinter.StringVar(self, "1080"), True),
             "Customer Charging Current Limit (A)": (customtkinter.StringVar(self, "140"), False),
             "Number of drive motors": (customtkinter.StringVar(self, "1"), True),
-            "Charge Capacity (Ah)": (customtkinter.StringVar(self, "158.8"), True),
+            "System Capacity (Ah)": (customtkinter.StringVar(self, "158.8"), True),
             "Customer 0% SoC (% of true SoC)": (customtkinter.StringVar(self, "10"), False),
             "Customer 100% SoC (% of true SoC)": (customtkinter.StringVar(self, "95"), False),
             "End of charge SoC (%)": (customtkinter.StringVar(self, "100"), False),

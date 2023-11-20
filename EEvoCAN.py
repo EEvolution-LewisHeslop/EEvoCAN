@@ -30,10 +30,6 @@ class App(customtkinter.CTk):
         # Create the tabview
         self.tabView = MainTabView(self, hwManager)
         self.tabView.grid(row=0, rowspan=2, column=1, padx=(0,20), pady=(0,20), sticky="nsew")
-
-        # Populate the window
-        self.button = customtkinter.CTkButton(self, text="Send Message", command=hwManager.send_message)
-        self.button.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
         
         # Create the device frame
         self.device_frame = DeviceFrame(self)
