@@ -3,7 +3,8 @@ import can
 
 from HwManager import HwManager
 from CANdle import CANdle
-from Prompts import Prompts
+from tkinter import filedialog
+import struct
 
 # Creates the software tab, which implements python translations of load_vs_domain.tcl
 class SoftwareTab(customtkinter.CTkFrame):
@@ -27,6 +28,12 @@ class SoftwareTab(customtkinter.CTkFrame):
         self.bte_button = customtkinter.CTkButton(self, text="VS BTE", command=self.bte)
         self.bte_button.pack(pady=10)
 
+        self.bootloader = customtkinter.CTkButton(self, text="BTS", command=self.bl_command)
+        self.bootloader.pack(pady=10)
+
+        self.search = customtkinter.CTkButton(self, text="Search", command=self.find_nodes)
+        self.search.pack(pady=10)
+
     # Sends raw CAN backdoor message on the first available network.
     def bl_backdoor(self):
         message = can.Message(arbitration_id=0x0055, data=[0x46, 0xB3, 0x2E, 0x49, 0xB7, 0x6F, 0x03, 0xCB])
@@ -36,6 +43,24 @@ class SoftwareTab(customtkinter.CTkFrame):
             bus.send(message)
         else:
             print("No devices to send bootloader backdoor.")
+
+    # Searches for nodes
+    def find_nodes(self):
+        # This will attempt to read an SDO from nodes 1 - 127
+        try:
+            result = self.candle.search_for_nodes()
+        except Exception as e:
+            print(f"Error searching for nodes:\n{e}")
+        return result
+
+    # Sends raw CAN backdoor message on the first available network.
+    def bl_command(self):
+        # Set read command for application
+        cmd = (0x01 << 8) | 0x0005
+        cmd_bytes = bytearray(struct.pack('>H', cmd))
+        result = self.candle.sdo_write(1, 0x5FF0, 1, cmd_bytes)
+        if (not result):
+            return result
 
     # Reads a memory space from a given memory area into a hexfile at the given path or returns read data directly.
     def bl_upload(self, nodeId=1, memorySpace="APPDATA", hexfilename=None):
@@ -60,7 +85,8 @@ class SoftwareTab(customtkinter.CTkFrame):
         
         # Set read command for application
         cmd = (blMemId << 8) | 0x0005
-        result = self.candle.sdo_write(nodeId, 0x5FF0, 1, cmd)
+        cmd_bytes = bytearray(struct.pack('>H', cmd))
+        result = self.candle.sdo_write(nodeId, 0x5FF0, 1, cmd_bytes)
         if (not result):
             return result
         
@@ -97,7 +123,7 @@ class SoftwareTab(customtkinter.CTkFrame):
             return "Unable to write to this memory space!"
     
         # TODO make fileopen prompts limit filetypes and point to a useful directory
-        hexfileName = Prompts.fileOpenPrompt()
+        hexfileName = filedialog.askopenfilename()
         
         # Check that a file was selected.
         if (hexfileName is None):
@@ -105,7 +131,7 @@ class SoftwareTab(customtkinter.CTkFrame):
 
         # Read the file contents.
         with open(hexfileName) as file:
-            fileContent = file.readlines
+            fileContent = file.readlines()
             
         # Convert filecontents to ordered byte value dictionary with address as key.
         hexByteArray:dict = self.hex_file_to_byte_array(self, fileContent)

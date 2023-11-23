@@ -1,9 +1,21 @@
 from HwManager import HwManager
 import canopen
+import time
 
 class CANdle:
     def __init__(self, hwManager:HwManager):
         self.hw_manager = hwManager
+
+    def search_for_nodes(self, network=None):
+        firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+        if (network is None):
+            network:canopen.Network = firstNetwork[0]
+        network.scanner.search()
+        # We may need to wait a short while here to allow all nodes to respond
+        time.sleep(0.05)
+        for node_id in network.scanner.nodes:
+            print("Found node %d!" % node_id)
+            network.add_node(node_id)
 
     # Sdo write based on the use of SdoServer
     def sdo_write(self, nodeId, index, subindex, data, network=None):
@@ -15,10 +27,10 @@ class CANdle:
         firstNetwork = self.hw_manager.activeCanopenNetworks[0]
 
         if (network is None):
-            network = firstNetwork
+            network:canopen.Network = firstNetwork[0]
 
         # Access the node from the network
-        node = network[nodeId]
+        node = network.nodes[nodeId]
 
         # Send the SDO
         try:
@@ -27,6 +39,7 @@ class CANdle:
             print("SDO write operation successful.")
             return "OK"
         except Exception as e:
+            print(f"Error in SDO operation: {e}")
             return f"Error in SDO operation: {e}"
 
     # Sdo write based on the use of SdoVariable
