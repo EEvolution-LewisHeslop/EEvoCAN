@@ -27,7 +27,7 @@ class DerateTab(customtkinter.CTkFrame):
         self.xlabel.grid(row=1, column=1, sticky="n")
 
         # Create Sheet
-        self.table = Sheet(self, theme="dark green", data = values)
+        self.table = Sheet(self, theme="dark green", data=values)
         self.table.enable_bindings()
         self.table.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
         self.table.extra_bindings([("begin_edit_cell", self.begin_edit_cell),
