@@ -4,6 +4,7 @@
 import customtkinter
 import threading
 import time
+from usbmonitor.attributes import ID_MODEL, ID_SERIAL
 
 import FrameBuilder
 from BasicComms import BasicTab
@@ -61,11 +62,11 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
         while (True):
             try:
                 i += 1
-                devices = hwManager.get_devices()
+                devices = hwManager.get_active_devices()
                 deviceText = ""
                 if (devices):
                     for device in devices:
-                        deviceText += f"{device.get('serial_number')}, {i}\n"
+                        deviceText += f"{device[0]}, {i}\n"
                     self.device_list.configure(text=deviceText)
                 else:
                     i = 0
@@ -96,7 +97,6 @@ class MainTabView(customtkinter.CTkTabview):
 
 # Main Application Startup Logic
 hwManager = HwManager()
-hwManager.start_auto_search()
 customtkinter.set_default_color_theme("green")
 customtkinter.set_appearance_mode("dark")
 app = App(hwManager)

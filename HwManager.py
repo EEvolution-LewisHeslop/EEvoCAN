@@ -1,192 +1,158 @@
-# 07/11/2023 - LH - Created HwManager.py
-# This will serve as device manager for EEvoCAN.
-# HwManager uses Python-CAN as its back end, but implements a device list getter and automatic device detection.
-import can
-from can.interfaces.ixxat import IXXATBus
-from can.interfaces.kvaser import KvaserBus
-from canopen import Network
+# 23/2023 - LH - Second iteration of HwManager.py
+# Previous iteration used a brute force search for new devices.
+# It led to a lot of random memory issues with the underlying device drivers.
+# This time we will do things more sensibly, by watching for usb events.
 import threading
-import time
+import can
+import canopen
 import ctypes
+import time
+from usbmonitor import USBMonitor
+from usbmonitor.attributes import ID_MODEL
 
-##### SUPPRESSESS ANNOYING SHUTDOWN WARNING CAUSE THE PACKAGE SAYS THAT UNINITIALISED BUSES ARE "NOT SHUTDOWN" #####
-import logging
-class IgnoreShutdownWarningFilter(logging.Filter):
-    def filter(self, record):
-    # Check if the log record contains the specific warning message
-        message = record.getMessage()
-        return "was not properly shut down" not in message
-# Get the logger used by the bus module
-logger = logging.getLogger('can.bus')
-# Add the filter to the logger
-logger.addFilter(IgnoreShutdownWarningFilter())
-##### SUPPRESSESS ANNOYING SHUTDOWN WARNING CAUSE THE PACKAGE SAYS THAT UNINITIALISED BUSES ARE "NOT SHUTDOWN" #####
-
-
-# Hw Manager Class is responsible for maintaining a list of connected devices.
+# Keeps a track of the connected CAN devices and creates canopen networks for the buses that are created.
 class HwManager():
-    searching = True
-    availableDeviceTypes = []
-    activeDevices:list[dict] = []
-    activeCanopenNetworks:list[Network] = []
+    networkList = []
+    deviceCounts = {'ixxat':0, 'kvaser':0, 'pcan':0, 'simplycan':0}
+    availableInterfaces = []
 
-    # Initialises a new hardware manager.
+    # Constructor for HwManager class.
     def __init__(self):
-        # Look for what device libraries are available on the system.
-        self.availableDeviceTypes = self.get_available_device_types()
-        if (len(self.availableDeviceTypes) == 0):
-            self.searching = False
-            print("Stopped searching because no device drivers are installed.")
-            return
+        # See what interface types are available.
+        self.availableInterfaces = self.get_available_device_types()
 
+        # Create the USBMonitor instance
+        self.monitor = USBMonitor()
+
+        # See what devices are already connected.
+        self.start_connected_devices()
+
+        # Start the device monitor
+        on_connect = lambda device_id, device_info: self.device_connected(device_id, device_info)
+        on_disconnect = lambda device_id, device_info: self.device_disconnected(device_id, device_info)
+
+        # Start the daemon
+        self.monitor.start_monitoring(on_connect=on_connect, on_disconnect=on_disconnect)
+        
     # Returns a list of available device types.
     def get_available_device_types(self):
         foundDeviceTypes = []
-        # Check for KVASER CANLIB Drivers
+
+        # Check for Kvaser CANLIB Drivers.
         try:
             from can.interfaces.kvaser import canlib
-            kvaserChannelCount = ctypes.c_void_p()     
-            canlib.canGetNumberOfChannels(ctypes.byref(kvaserChannelCount))
-            # by default there are two virtual channels, so reduce the channel count by this amount.
-            kvaserChannelCount.value -= 2
-            foundDeviceTypes.append("kvaser")
-            print(f"Kvaser Drivers Found: {int(0 if kvaserChannelCount.value is None else kvaserChannelCount.value)} device(s) connected.")
+            connectedKvaserDevices = ctypes.c_void_p()
+            canlib.canGetNumberOfChannels(ctypes.byref(connectedKvaserDevices))
+            foundDeviceTypes.append('kvaser')
         except Exception as e:
-            print(e, "Kvaser Drivers not found!")
+            pass
+
+        # Check for PCAN Drivers
+        try:
+            from can.interfaces.pcan.basic import PCANBasic
+            pcanDriverPresent = PCANBasic()
+            # TODO: Count the number of pcan devices on startup.
+            foundDeviceTypes.append('pcan')
+        except Exception as e:
+            pass
 
         # Check for Ixxat VCI Drivers
         try:
             from can.interfaces.ixxat import get_ixxat_hwids
-            ixxatChannelCount = len(get_ixxat_hwids())
-            foundDeviceTypes.append("ixxat")
-            print(f"Ixxat Drivers Found: {ixxatChannelCount} device(s) connected.")
+            connectedIxxatDevices = len(get_ixxat_hwids())
+            foundDeviceTypes.append('ixxat')
         except:
-            print("Ixxat Drivers not found!")
+            pass
 
-        # Check for PCAN Drivers ##### TODO #####
-        #pcan_devices = pcan
-        #foundDeviceTypes.append("PCAN")
-        #print(f"PCAN Drivers Found: {pcan_devices} device(s) connected.")
-        
         return foundDeviceTypes
-
-    # Returns the current list of devices.
-    def get_devices(self):
-        return self.activeDevices
-
-    # Starts the background searcher thread.
-    def start_auto_search(self):
-        if (self.searching):
-            threading.Thread(target=self.background_searcher, daemon=True).start()
-
-    # Thread that calls find_devices every second.
-    def background_searcher(self):
-        print("New background searcher created.")
-        while(self.searching):            
-            self.update_devices()
-            time.sleep(1)
-
-    # Attempts to find devices, and remove any that have disconnected.
-    def update_devices(self):
-        # Foreach avaibable device type, try to find new devices.
-        print("Searching for devices.")
-        detected_devices:list[dict] = []
-        if ("ixxat" in self.availableDeviceTypes):
-            ixxat_devices:list[dict] = self.find_devices_generic("ixxat", 10)
-            detected_devices.extend(ixxat_devices)
-        if ("kvaser" in self.availableDeviceTypes):
-            kvaser_devices:list[dict] = self.find_devices_generic("kvaser", 10)
-            # Ignore virtual device(s).
-            kvaser_devices = [device for device in kvaser_devices if device.get('serial_number') is not None]
-            detected_devices.extend(kvaser_devices)
-        # Ignoring devices that already exist in the list of active devices, add the newly found devices and create a canopen networks for them.
-        for device in detected_devices:
-            if device['serial_number'] not in [d['serial_number'] for d in self.activeDevices]:
-                self.activeDevices.append(device)
-                # Create and add new CANopen network
-                deviceBus:can.BusABC = device.get('bus')
-                network = Network(deviceBus)
-                self.activeCanopenNetworks.append((network, device.get('serial_number')))
-                print(f"Added device {device.get('serial_number')}: {deviceBus.channel_info}")
-
-        # If any devices have been unplugged since last time, remove them.
-        self.remove_disconnected_devices(detected_devices)
-
-    # Removes any devices that have now disconnected.
-    def remove_disconnected_devices(self, detected_devices):
-        # Create a set of detected Serial_numbers for easy comparison
-        detected_serial_numbers = {device['serial_number'] for device in detected_devices if device['serial_number']}
-
-        # Find which Serial_numbers are no longer present
-        disconnected_serial_numbers = set([d['serial_number'] for d in self.activeDevices]) - detected_serial_numbers
-
-        # Remove disconnected devices from the list of active devices and its canopen network from the list of canopen networks.
-        if (len(disconnected_serial_numbers) > 0):
-            networksToShutdown = [network for network in self.activeCanopenNetworks if network[1] in disconnected_serial_numbers]
-            devicesToShutdown = [device for device in self.activeDevices if device.get('serial_number') in disconnected_serial_numbers]
-            for network in networksToShutdown:
-                self.shutdown_network(network)
-            for device in devicesToShutdown:
-                self.shutdown_device(device)
-                bus:can.BusABC = device.get('bus')
-                print(f"Removed device {device.get('serial_number')}: {bus.channel_info}")
     
-    # Removes the device from the device list, TODO, any other cleanup required.
-    def shutdown_network(self, network):
-        self.activeCanopenNetworks.remove(network)
-
-    # Removes the device from the device list, TODO, any other cleanup required.
-    def shutdown_device(self, device_to_remove):
-        if device_to_remove:
-            # Remove the bus from active buses
-            self.activeDevices.remove(device_to_remove)
-
-    # A method finding buses based on a given interfacetype. Because not all buses are structured the same, there are some configurations to do
-    def find_devices_generic(self, interface_type, max_channels, **kwargs):
-        detected_devices = []
-        # Get the interface specific bus classes
-        BusClass = {
-            'ixxat': IXXATBus,
-            'kvaser': KvaserBus
-        }.get(interface_type)
-        # Get the interface specific attribute name/location for a unique identifier
-        busIdAttr = {
-            'ixxat': 'bus._device_info.UniqueHardwareId.AsChar',
-            'kvaser': 'serial_number'
-        }.get(interface_type)
-
-        # If the classtype was unrecognized, error.
-        if not BusClass:
-            raise ValueError(f"Unsupported interface type: {interface_type}")
-        
-        # For the given number of channels try to create a bus, if successful add it to the list of detected devices.
-        for channel in range(max_channels):
+    # Check if any devices are already connected, and if they are, create the relevant buses for them.
+    def start_connected_devices(self):
+        # Get a list of the connected CAN devices:
+        connectedDevices = self.monitor.get_available_devices()
+        for key, value in connectedDevices.items():
             try:
-                bus = None
-                id_value = None
-                with BusClass(channel=channel, **kwargs) as bus:
-                    id_value = get_nested_attr(bus, busIdAttr, None)
-                    if id_value and hasattr(id_value, 'decode'):
-                        id_value = id_value.decode('ascii')  # decode if it's bytes
-                defaultBitrate = 500000
-                bus = can.interface.Bus(interface=interface_type, channel=channel, bitrate=defaultBitrate)
-                bus.channel_info = f"interface_type={interface_type}, channel={channel}, bitrate={defaultBitrate}Kb/s"
-                detected_devices.append({
-                    'channel': channel,
-                    'serial_number': id_value,
-                    'bus': bus,
-                    'bustype': interface_type
-                })
-            except can.CanError:
-                continue
+                self.device_connected(key, value)
+            except Exception as e:
+                print(e)
 
-        return detected_devices
+    # Called when a USB device is connected, checks for drivers, creates interface.
+    def device_connected(self, device_id, device_info):
+        # A device was connected, check what type it was.
+        interface = ''
+        if ("VCI" in device_info[ID_MODEL]):
+            time.sleep(1)
+            interface = 'ixxat'
+        elif ("Kvaser" in device_info[ID_MODEL]):
+            interface = 'kvaser'
+            # Kvaser driver takes a while to move the channel ids of the virtual channels.
+            time.sleep(1)
+        elif ("PCAN" in device_info[ID_MODEL]):
+            interface = 'pcan'
 
-# Helper for getting attributes that are deeply nested    
-def get_nested_attr(obj, attr_path:str, default=None):
-    try:
-        for attr in attr_path.split('.'):
-            obj = getattr(obj, attr)
-        return obj
-    except AttributeError:
-        return default
+        # Check that the drivers for this interface type are available, then create the network.
+        if (not interface): return
+        if (interface in self.availableInterfaces):
+            try:
+                self.create_network(device_id, device_info, interface, self.deviceCounts[interface])
+            except:
+                print("Failed to start network.")
+        else:
+            print (f"Device of type {interface} was connected but no drivers were found.")
+
+    # Called when a USB device is disconnected, shuts down the network and bus and removes them from the list.
+    def device_disconnected(self, device_id, device_info):
+        # Identify the object in the network list that corresponds to the disconnected device.
+        for network in self.networkList:
+            if (network[0] == device_id):
+                networkToShutdown = network
+        try:
+            networkToShutdown[3]:canopen.Network.disconnect()
+            self.deviceCounts[network[2]] -= 1
+            self.networkList.remove(networkToShutdown)
+            del networkToShutdown
+            print("Network Shutdown")
+        except:
+            print("failed to shutdown")
+
+    # Creates a network of type interface at channel with default bitrate of 500kb/s.
+    def create_network(self, device_id, device_info, interface, channel):
+        # Create the bus and start a network with it.
+        network = canopen.Network()
+        network.connect(bustype=interface, channel=channel, bitrate=500000)
+        bus = network.bus
+        
+        # Create a monitor that watches for errors on the given bus.
+        listener = ShutdownListener(bus)
+        notifier = can.Notifier(bus, [listener])
+        busCleaner = threading.Thread(target=lambda:self.bus_cleaner(bus, listener, notifier), daemon=True).start()
+        
+        # Add the bus to the list.
+        self.networkList.append((device_id, device_info, interface, network, bus))
+
+        # Increment the count of currently connected devices for this interface type.
+        self.deviceCounts[interface] += 1
+
+        # Notify the user of the added device.
+        print(f"Added network of type: {interface}, at channel {channel} for type.")
+
+    def bus_cleaner(self, bus:can.BusABC, listener:can.Listener, notifier:can.Notifier):
+        while listener.exc.empty():
+            time.sleep(0.01)
+        notifier.stop()
+        bus.shutdown()
+
+    def get_active_devices(self):
+        return self.networkList
+            
+
+# Listens for errors 
+from queue import Queue
+class ShutdownListener(can.Listener):
+    exc = Queue()
+
+    def on_message_received(self, msg: can.Message) -> None:
+        pass
+
+    def on_error(self, exc: Exception) -> None:
+        self.exc.put(exc)
