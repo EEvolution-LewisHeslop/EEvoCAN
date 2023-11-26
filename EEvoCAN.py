@@ -4,9 +4,11 @@
 import customtkinter
 import threading
 import time
+
 from usbmonitor.attributes import ID_MODEL, ID_SERIAL
 
 import FrameBuilder
+import PrefManager
 from BasicComms import BasicTab
 from ConfigurationWizard import ConfigurationTab
 from SoftwareLoader import SoftwareTab
@@ -22,8 +24,8 @@ class App(customtkinter.CTk):
         super().__init__()
         self.title("EEvoCAN")
         self.iconbitmap("resources/icon/icon.ico")
-        self.geometry("1200x800")
-        #self.minsize(800,500)
+        self.geometry("1200x600")
+        self.geometry(PrefManager.load_prefs('Window', 'geometry'))
         self.resizable(True, True)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -36,6 +38,9 @@ class App(customtkinter.CTk):
         self.device_frame = DeviceFrame(self)
         self.device_frame.configure(width=100)
         self.device_frame.grid(row=1, column = 0, padx=20, pady=(15,0), sticky="nw")
+        
+        # Every now and then, capture the screen state location.
+        threading.Thread(target=lambda: PrefManager.save_window_state(self), daemon=True).start()        
 
 ### Device Frame ###
 
@@ -100,5 +105,4 @@ hwManager = HwManager()
 customtkinter.set_default_color_theme("green")
 customtkinter.set_appearance_mode("dark")
 app = App(hwManager)
-app.after(1, app.wm_state, 'zoomed')
 app.mainloop()
