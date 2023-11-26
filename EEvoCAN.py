@@ -24,7 +24,7 @@ class App(customtkinter.CTk):
         super().__init__()
         self.title("EEvoCAN")
         self.iconbitmap("resources/icon/icon.ico")
-        self.geometry("1200x600")
+        self.minsize(1200, 600)
         self.geometry(PrefManager.load_prefs('Window', 'geometry'))
         self.resizable(True, True)
         self.grid_columnconfigure(1, weight=1)
