@@ -281,7 +281,7 @@ BO_ 3221225472 VECTOR__INDEPENDENT_SIG_MSG: 0 Vector__XXX
  SG_ IVT_Result_T_Measurement_Error : 0|1@0+ (1,0) [0|0] "" Vector__XXX
  SG_ IVT_Result_T_Channel_Error : 0|1@0+ (1,0) [0|0] "" Vector__XXX
  SG_ IVT_ID_Result_T : 0|8@0+ (1,0) [4|4] "" Vector__XXX
- SG_ IVT_Result_T : 0|32@0- (1,0) [-32767|32768] "°C" Vector__XXX
+ SG_ IVT_Result_T : 0|32@0- (1,0) [-32767|32768] " C" Vector__XXX
  SG_ IVT_MsgCount_Result_T : 0|4@0+ (1,0) [0|0] "" Vector__XXX
  SG_ IVT_Result_U3_System_Error : 0|1@0+ (1,0) [0|0] "" Vector__XXX
  SG_ IVT_Result_U3_OCS : 0|1@0+ (1,0) [0|0] "" Vector__XXX
@@ -416,8 +416,8 @@ BO_ 1284 DashInfo: 8 Vector__XXX
  SG_ StateOfCharge : 0|10@1+ (0.1,0) [0|100] "%" Vector__XXX
  SG_ ChargingFlag : 10|1@1+ (1,0) [0|0] "" Vector__XXX
  SG_ BatteryFaultFlag : 11|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ BatteryTemperature : 16|8@1+ (0.5,-40) [4294967256|86] "°C" Vector__XXX
- SG_ Current : 24|16@1+ (0.0001,0) [0|6.5535] "A" Vector__XXX
+ SG_ BatteryTemperature : 16|8@1+ (0.5,-40) [0|86] " C" Vector__XXX
+ SG_ Current : 24|16@1+ (0.1,0) [0|2000] "A" Vector__XXX
 
 BO_ 1345 Gen4_1: 8 Vector__XXX
  SG_ Velocity : 0|32@1- (1,0) [0|0] "" Vector__XXX

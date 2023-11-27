@@ -4,10 +4,10 @@ import time
 
 class CANdle:
     def __init__(self, hwManager:HwManager):
-        self.hw_manager = hwManager
+        self.hwManager = hwManager
 
     def search_for_nodes(self, network=None):
-        firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+        firstNetwork = self.hwManager.activeCanopenNetworks[0]
         if (network is None):
             network:canopen.Network = firstNetwork[0]
         network.scanner.search()
@@ -20,11 +20,11 @@ class CANdle:
     # Sdo write based on the use of SdoServer
     def sdo_write(self, nodeId, index, subindex, data, network=None):
         # Check if there is at least one active CANopen network
-        if (network == None and not self.hw_manager.activeCanopenNetworks):
+        if (network == None and not self.hwManager.activeCanopenNetworks):
             return "Error: No available canopen networks for sdo_write."
 
         # Access the first CANopen network
-        firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+        firstNetwork = self.hwManager.activeCanopenNetworks[0]
 
         if (network is None):
             network:canopen.Network = firstNetwork[0]
@@ -56,11 +56,11 @@ class CANdle:
         """
         try:
             # Check if there is at least one active CANopen network
-            if (network == None and not self.hw_manager.activeCanopenNetworks):
+            if (network == None and not self.hwManager.activeCanopenNetworks):
                 return "Error: No available canopen networks for sdo_wnx."
 
             # Access the first CANopen network
-            firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+            firstNetwork = self.hwManager.activeCanopenNetworks[0]
 
             if (network is None):
                 network = firstNetwork
@@ -84,11 +84,11 @@ class CANdle:
     # Sdo read based on the use of SdoServer
     def sdo_read(self, nodeId, index, subindex, network=None):
         # Check if there is at least one active CANopen network
-        if (network == None and not self.hw_manager.activeCanopenNetworks):
+        if (network == None and not self.hwManager.activeCanopenNetworks):
             return "Error: No available canopen networks for sdo_read."
 
         # Access the first CANopen network
-        firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+        firstNetwork = self.hwManager.activeCanopenNetworks[0]
 
         if (network is None):
             network = firstNetwork
@@ -118,11 +118,11 @@ class CANdle:
         """
         try:
             # Check if there is at least one active CANopen network
-            if (network == None and not self.hw_manager.activeCanopenNetworks):
+            if (network == None and not self.hwManager.activeCanopenNetworks):
                 return "Error: No available canopen networks for sdo_write."
 
             # Access the first CANopen network
-            firstNetwork = self.hw_manager.activeCanopenNetworks[0]
+            firstNetwork = self.hwManager.activeCanopenNetworks[0]
 
             if (network is None):
                 network = firstNetwork

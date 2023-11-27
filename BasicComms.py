@@ -1,30 +1,43 @@
 import customtkinter
 from DbcFrame import DbcFrame
-
+from HwManager import HwManager
 import tk_tools
 
 # Creates the basic tab
 class BasicTab(customtkinter.CTkFrame):
-    def __init__(self, master: customtkinter.CTkFrame):
+    hwManager:HwManager = None
+    def __init__(self, master: customtkinter.CTkFrame, hwManager:HwManager):
         super().__init__(master)
-
+        self.hwManager = hwManager
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=100)
+        self.grid_rowconfigure(2, weight=1)
         
+        # Create the connect button, later this will be a dropdown with available networks.
+        self.connectButton = customtkinter.CTkButton(self, text="Connect", command=self.connect_network)
+        self.connectButton.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky="w")
+
         # Create the four frames:
         self.RawCANFrame = RawCANFrame(self)
-        self.RawCANFrame.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
+        self.RawCANFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
 
         self.dbcFrame = DbcFrame(self)
-        self.dbcFrame.grid(row=0, column=1, padx=2, pady=2, sticky="nsew")
+        self.dbcFrame.grid(row=1, column=1, padx=2, pady=2, sticky="nsew")
 
         self.CliFrame = CliFrame(self)
-        self.CliFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
+        self.CliFrame.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
 
         self.buttonD = GaugeFrame(self)
-        self.buttonD.grid(row=1, column=1, padx=2, pady=2, sticky="nsew")
+        self.buttonD.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
+    
+    def connect_network(self):
+        print("Connecting basic comms tab to network")
+        self.dbcFrame.network = self.hwManager.networkList[0][3]
+        if (len(self.hwManager.networkList)>1):
+            self.dbcFrame.sendNetwork = self.hwManager.networkList[1][3]
+        self.dbcFrame.refresh_dbc_sheet(False)        
 
 class GaugeFrame(customtkinter.CTkFrame):
     def __init__(self, master):

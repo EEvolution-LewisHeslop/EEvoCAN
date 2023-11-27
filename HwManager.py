@@ -11,6 +11,7 @@ from usbmonitor import USBMonitor
 from usbmonitor.attributes import ID_MODEL
 
 # Keeps a track of the connected CAN devices and creates canopen networks for the buses that are created.
+# Networks are stored in networkList as (device_id, device_info, interface, network, bus)
 class HwManager():
     networkList = []
     deviceCounts = {'ixxat':0, 'kvaser':0, 'pcan':0, 'simplycan':0}
@@ -33,6 +34,15 @@ class HwManager():
 
         # Start the daemon
         self.monitor.start_monitoring(on_connect=on_connect, on_disconnect=on_disconnect)
+
+        # If there are only 2 channels connected and kvaser is avaialable, connect virtual channels.
+        if ('kvaser' in self.availableInterfaces and len(can.detect_available_configs(['kvaser', 'ixxat', 'pcan']))==2):
+            self.connect_virtual_devices()
+
+    def connect_virtual_devices(self):
+        print("WARNING - Kvaser drivers installed and only 2 channels found, enabling Dev Mode.")
+        self.create_network("Virtual0", None, 'kvaser', 0)
+        self.create_network("Virtual1", None, 'kvaser', 1)
         
     # Returns a list of available device types.
     def get_available_device_types(self):

@@ -10,7 +10,7 @@ import struct
 class SoftwareTab(customtkinter.CTkFrame):
     def __init__(self, master, hwManager: HwManager):
         super().__init__(master)
-        self.hw_manager = hwManager
+        self.hwManager = hwManager
         self.create_buttons()
         self.candle = CANdle(hwManager=hwManager)
 
@@ -38,8 +38,8 @@ class SoftwareTab(customtkinter.CTkFrame):
     def bl_backdoor(self):
         message = can.Message(arbitration_id=0x0055, data=[0x46, 0xB3, 0x2E, 0x49, 0xB7, 0x6F, 0x03, 0xCB])
         # Check for an available network.
-        if len(self.hw_manager.activeDevices) > 0:
-            bus:can.BusABC = self.hw_manager.activeDevices[0].get('bus')
+        if len(self.hwManager.activeDevices) > 0:
+            bus:can.BusABC = self.hwManager.activeDevices[0].get('bus')
             bus.send(message)
         else:
             print("No devices to send bootloader backdoor.")
@@ -175,10 +175,10 @@ class SoftwareTab(customtkinter.CTkFrame):
     # Exits the current bootloader session on the given node.
     def bte(self, nodeId):
         # Ending the bootloader session with an SDO command
-        if (not self.hw_manager.activeCanopenNetworks):
+        if (not self.hwManager.activeCanopenNetworks):
             return "No available canopen networks for bte."
         
-        result = self.candle.sdo_write(nodeId, 0x5FF0, 1, 0x0002, self.hw_manager.activeCanopenNetworks[0])
+        result = self.candle.sdo_write(nodeId, 0x5FF0, 1, 0x0002, self.hwManager.activeCanopenNetworks[0])
 
     # Gets the memory info from the given memory identifier.
     def get_memory_info(self, mem):

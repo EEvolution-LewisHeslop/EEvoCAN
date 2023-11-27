@@ -93,7 +93,7 @@ class MainTabView(customtkinter.CTkTabview):
             super().__init__(master)
 
             # Build the tabs
-            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab)
+            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab, hwManager=hwManager)
             FrameBuilder.tab_builder(self, title="Configuration Wizard", tabContent=ConfigurationTab)
             FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab, hwManager=hwManager)
 
