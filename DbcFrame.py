@@ -88,7 +88,7 @@ class DbcFrame(customtkinter.CTkFrame):
         for box in boxes:
             box['check_function']([0,0,0,False])
 
-        # TEST Try to send a message
+        # If we're in debugmode, try to send a test message.
         if isinstance(self.sendNetwork, canopen.Network):            
             message = self.db.get_message_by_name('DashInfo')
             data = message.encode({'StateOfCharge': 100.0, 'ChargingFlag': 0, 'BatteryFaultFlag': 1, 'BatteryTemperature':21, 'Current':75})

@@ -16,6 +16,7 @@ class HwManager():
     networkList = []
     deviceCounts = {'ixxat':0, 'kvaser':0, 'pcan':0, 'simplycan':0}
     availableInterfaces = []
+    devMode = False
 
     # Constructor for HwManager class.
     def __init__(self):
@@ -43,6 +44,7 @@ class HwManager():
         print("WARNING - Kvaser drivers installed and only 2 channels found, enabling Dev Mode.")
         self.create_network("Virtual0", None, 'kvaser', 0)
         self.create_network("Virtual1", None, 'kvaser', 1)
+        self.devMode = True
         
     # Returns a list of available device types.
     def get_available_device_types(self):

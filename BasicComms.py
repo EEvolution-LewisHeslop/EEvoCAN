@@ -35,9 +35,9 @@ class BasicTab(customtkinter.CTkFrame):
     def connect_network(self):
         print("Connecting basic comms tab to network")
         self.dbcFrame.network = self.hwManager.networkList[0][3]
-        if (len(self.hwManager.networkList)>1):
+        if (self.hwManager.devMode):
             self.dbcFrame.sendNetwork = self.hwManager.networkList[1][3]
-        self.dbcFrame.refresh_dbc_sheet(False)        
+        self.dbcFrame.refresh_dbc_sheet(False)
 
 class GaugeFrame(customtkinter.CTkFrame):
     def __init__(self, master):
