@@ -9,7 +9,6 @@ import canopen
 # Takes the current hwmanager
 class DbcFrame(customtkinter.CTkFrame):
     network:canopen.Network = None
-    sendNetwork:canopen.Network = None
     def __init__(self, master):
         super().__init__(master)
 
@@ -45,8 +44,7 @@ class DbcFrame(customtkinter.CTkFrame):
         # Refresh the dbc sheet
         self.refresh_dbc_sheet()
 
-    def refresh_dbc_sheet(self, redraw=True):
-           
+    def refresh_dbc_sheet(self, redraw=True):           
         # Create Sheet
         self.sheet = Sheet(self, theme="dark green")
         self.sheet.enable_bindings()
@@ -87,12 +85,6 @@ class DbcFrame(customtkinter.CTkFrame):
         boxes = self.sheet.get_index_checkboxes().values()
         for box in boxes:
             box['check_function']([0,0,0,False])
-
-        # If we're in debugmode, try to send a test message.
-        if isinstance(self.sendNetwork, canopen.Network):            
-            message = self.db.get_message_by_name('DashInfo')
-            data = message.encode({'StateOfCharge': 100.0, 'ChargingFlag': 0, 'BatteryFaultFlag': 1, 'BatteryTemperature':21, 'Current':75})
-            self.sendNetwork.send_message(message.frame_id, data, False)
 
     # Collapses or expands given rows based on its checked ("box[3]") status.
     def collapse(self, box, rows):

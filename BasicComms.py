@@ -1,11 +1,14 @@
 import customtkinter
 from DbcFrame import DbcFrame
+from RawCANFrame import RawCANFrame
 from HwManager import HwManager
 import tk_tools
+import canopen
 
 # Creates the basic tab
 class BasicTab(customtkinter.CTkFrame):
     hwManager:HwManager = None
+    sendNetwork:canopen.Network = None
     def __init__(self, master: customtkinter.CTkFrame, hwManager:HwManager):
         super().__init__(master)
         self.hwManager = hwManager
@@ -18,26 +21,39 @@ class BasicTab(customtkinter.CTkFrame):
         # Create the connect button, later this will be a dropdown with available networks.
         self.connectButton = customtkinter.CTkButton(self, text="Connect", command=self.connect_network)
         self.connectButton.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky="w")
+                
+        # Create the send button, this sends the test message.
+        self.connectButton = customtkinter.CTkButton(self, text="Send", command=self.send_test_message)
+        self.connectButton.grid(row=0, column=1, padx=2, pady=2, columnspan=2, sticky="w")
 
         # Create the four frames:
-        self.RawCANFrame = RawCANFrame(self)
-        self.RawCANFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
+        self.rawCANFrame = RawCANFrame(self)
+        self.rawCANFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
 
         self.dbcFrame = DbcFrame(self)
         self.dbcFrame.grid(row=1, column=1, padx=2, pady=2, sticky="nsew")
 
-        self.CliFrame = CliFrame(self)
-        self.CliFrame.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
+        self.cliFrame = CliFrame(self)
+        self.cliFrame.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
 
         self.buttonD = GaugeFrame(self)
         self.buttonD.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
     
     def connect_network(self):
         print("Connecting basic comms tab to network")
-        self.dbcFrame.network = self.hwManager.networkList[0][3]
         if (self.hwManager.devMode):
-            self.dbcFrame.sendNetwork = self.hwManager.networkList[1][3]
+            self.sendNetwork = self.hwManager.networkList[1][3]
+        self.dbcFrame.network = self.hwManager.networkList[0][3]
+        self.rawCANFrame.network = self.hwManager.networkList[0][3]
+        self.rawCANFrame.assign_listener()
         self.dbcFrame.refresh_dbc_sheet(False)
+
+    def send_test_message(self):
+        # If we're in debugmode, try to send a test message.
+        if isinstance(self.sendNetwork, canopen.Network):            
+            message = self.dbcFrame.db.get_message_by_name('DashInfo')
+            data = message.encode({'StateOfCharge': 100.0, 'ChargingFlag': 0, 'BatteryFaultFlag': 1, 'BatteryTemperature':21, 'Current':75})
+            self.sendNetwork.send_message(message.frame_id, data, False)
 
 class GaugeFrame(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -107,31 +123,3 @@ class CliFrame(customtkinter.CTkFrame):
         self.cliSend = customtkinter.CTkButton(self, height=30, text="Send")
         self.cliSend.grid(row=2, column=1, padx=5, pady=(0,5))
 
-class RawCANFrame(customtkinter.CTkFrame):
-    def __init__(self, master):
-        super().__init__(master)
-        
-        # Set the weights
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-
-        # Create the section header.
-        self.rawCANLabel = customtkinter.CTkLabel(self, text="Raw CAN Data")
-        self.rawCANLabel.grid(row=0, column=0, padx=20, pady=10, sticky="w")
-
-        # Create logging LED
-        self.led0 = tk_tools.Led(self, size=40, bg="#333333")
-        self.led0.grid(row=0, column=1, padx=10, pady=0)
-        self.led0.to_green(False)
-
-        # Create the logging button.
-        self.logCANButton = customtkinter.CTkButton(self, text="Log CAN", command=lambda:self.load_dbc(self.sheet))
-        self.logCANButton.grid(row=0, column=2, padx=20, pady=10)
-
-        # Create the raw CAN viewer.
-        self.canText = customtkinter.CTkTextbox(self)
-        self.canText.grid(row=1, column=0, columnspan=3 , padx=5, pady=(0,5), sticky="nsew")
-        # Add the default text
-        self.canText.configure(state='normal')
-        self.canText.insert('end', "Waiting for CAN...")
-        self.canText.configure(state='disabled')
