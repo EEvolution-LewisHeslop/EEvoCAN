@@ -6,8 +6,9 @@ from can import Message, Listener, Notifier
 class RawCANFrame(customtkinter.CTkFrame):
     network:canopen.Network = None
     
-    def __init__(self, master):
+    def __init__(self, master, network=None):
         super().__init__(master)
+        self.network = network
 
         # Set the weights
         self.grid_columnconfigure(0, weight=1)
@@ -33,6 +34,9 @@ class RawCANFrame(customtkinter.CTkFrame):
         self.canText.configure(state='normal')
         self.canText.insert('end', "Waiting for CAN...\n")
         self.canText.configure(state='disabled')
+
+        if (self.network is not None):
+            self.assign_listener()
 
     def assign_listener(self):
         # Create a listener

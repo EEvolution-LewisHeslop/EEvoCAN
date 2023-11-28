@@ -9,9 +9,9 @@ import canopen
 # Takes the current hwmanager
 class DbcFrame(customtkinter.CTkFrame):
     network:canopen.Network = None
-    def __init__(self, master):
-        super().__init__(master)
-
+    def __init__(self, master, network=None):
+        super().__init__(master, )
+        self.network = network
         self.configure(fg_color="darkslategray", corner_radius=6)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -53,10 +53,7 @@ class DbcFrame(customtkinter.CTkFrame):
         self.sheet.edit_bindings(False)
         
         # Check to see if network is assigned.
-        networkAvailable = False
-        if isinstance(self.network, canopen.Network):
-            networkAvailable = True
-        else:
+        if (self.network is None):
             print("DBC Frame's network is not yet assigned.")
 
         # Foreach message, create a row in the given sheet, foreach signal in the message, create a row, hide the signal rows, create a button that hides or unhides.
@@ -71,7 +68,7 @@ class DbcFrame(customtkinter.CTkFrame):
                 self.sheet.insert_row(['', signal.name, '', signal.unit, ''])                
                 messageSignalSet.add(rowCount)
                 # For the signal register a callback that updates the value cell when a message is received.
-                if (networkAvailable):
+                if (self.network is not None):
                     self.network.subscribe(can_id=message.frame_id, callback=lambda x,y,z,r=rowCount,s=signal:self.dbc_callback(x,y,z,r,s))
             # Create a checkbox for the message row that allows you to collapse the message row.
             self.sheet.create_index_checkbox(r = lastRowCount, check_function=lambda box, rows=messageSignalSet:self.collapse(box, rows), checked=False)

@@ -26,23 +26,27 @@ class BasicTab(customtkinter.CTkFrame):
         self.connectButton = customtkinter.CTkButton(self, text="Send", command=self.send_test_message)
         self.connectButton.grid(row=0, column=1, padx=2, pady=2, columnspan=2, sticky="w")
 
+        defaultNetwork = None
+        if (len(self.hwManager.networkList) > 0):
+            defaultNetwork = self.hwManager.networkList[0][3]
+        if (self.hwManager.devMode):
+            self.sendNetwork = self.hwManager.networkList[1][3]
+            
         # Create the four frames:
-        self.rawCANFrame = RawCANFrame(self)
+        self.rawCANFrame = RawCANFrame(self, defaultNetwork)
         self.rawCANFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
 
-        self.dbcFrame = DbcFrame(self)
+        self.dbcFrame = DbcFrame(self, defaultNetwork)
         self.dbcFrame.grid(row=1, column=1, padx=2, pady=2, sticky="nsew")
 
-        self.cliFrame = CliFrame(self)
+        self.cliFrame = CliFrame(self, defaultNetwork)
         self.cliFrame.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
 
-        self.buttonD = GaugeFrame(self)
+        self.buttonD = GaugeFrame(self, defaultNetwork)
         self.buttonD.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
     
     def connect_network(self):
         print("Connecting basic comms tab to network")
-        if (self.hwManager.devMode):
-            self.sendNetwork = self.hwManager.networkList[1][3]
         self.dbcFrame.network = self.hwManager.networkList[0][3]
         self.rawCANFrame.network = self.hwManager.networkList[0][3]
         self.rawCANFrame.assign_listener()
@@ -56,7 +60,8 @@ class BasicTab(customtkinter.CTkFrame):
             self.sendNetwork.send_message(message.frame_id, data, False)
 
 class GaugeFrame(customtkinter.CTkFrame):
-    def __init__(self, master):
+    network:canopen.Network
+    def __init__(self, master, network=None):
         super().__init__(master)
         self.configure(fg_color="darkslategray", corner_radius=6)
         
@@ -71,8 +76,8 @@ class GaugeFrame(customtkinter.CTkFrame):
         self.gaugesLabel.grid(row=0, column=0, columnspan=3, padx=20, pady=10, sticky="w")
 
         # Create Battery Voltage Gauge
-        self.gauge1 = tk_tools.Gauge(self, max_value=100.0,
-                       label='Bat Voltage', unit='V', bg="darkslategray")
+        self.gauge1 = tk_tools.Gauge(self, min_value=-30, max_value=85.0,
+                       label='Bat Temp', unit='°C', bg="darkslategray")
         self.gauge1.grid(row=1, column=0, padx=5, pady=5)
         self.gauge1.set_value(25)
         self.gauge1._canvas.configure(bg="darkslategray", highlightthickness=0)    
@@ -96,8 +101,10 @@ class GaugeFrame(customtkinter.CTkFrame):
         self.createGauge.grid(row=2, columnspan=3, padx=5, pady=5)        
 
 class CliFrame(customtkinter.CTkFrame):
-    def __init__(self, master):
+    network:canopen.Network
+    def __init__(self, master, network=None):
         super().__init__(master)
+        self.network = network
 
         # Set the weights
         self.grid_columnconfigure(0, weight=1)
