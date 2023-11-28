@@ -52,3 +52,6 @@ class RawCANListener(Listener):
         self.text.configure(state='normal')
         self.text.insert('end', str(msg)+"\n")
         self.text.configure(state='disabled')    
+
+    def on_error(self, exc: Exception) -> None:
+        print("Error in RawCAN listener: " + exc)

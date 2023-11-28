@@ -135,9 +135,9 @@ class HwManager():
         bus = network.bus
         
         # Create a monitor that watches for errors on the given bus.
-        listener = ShutdownListener(bus)
-        notifier = can.Notifier(bus, [listener])
-        busCleaner = threading.Thread(target=lambda:self.bus_cleaner(bus, listener, notifier), daemon=True).start()
+        #listener = ShutdownListener(bus)
+        #notifier = can.Notifier(bus, [listener])
+        #busCleaner = threading.Thread(target=lambda:self.bus_cleaner(bus, listener, notifier), daemon=True).start()
         
         # Add the bus to the list.
         self.networkList.append((device_id, device_info, interface, network, bus))

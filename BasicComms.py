@@ -1,9 +1,11 @@
 import customtkinter
 from DbcFrame import DbcFrame
 from RawCANFrame import RawCANFrame
+from GaugeFrame import GaugeFrame
 from HwManager import HwManager
-import tk_tools
 import canopen
+import threading
+import time
 
 # Creates the basic tab
 class BasicTab(customtkinter.CTkFrame):
@@ -31,7 +33,7 @@ class BasicTab(customtkinter.CTkFrame):
             defaultNetwork = self.hwManager.networkList[0][3]
         if (self.hwManager.devMode):
             self.sendNetwork = self.hwManager.networkList[1][3]
-            
+
         # Create the four frames:
         self.rawCANFrame = RawCANFrame(self, defaultNetwork)
         self.rawCANFrame.grid(row=1, column=0, padx=2, pady=2, sticky="nsew")
@@ -42,7 +44,7 @@ class BasicTab(customtkinter.CTkFrame):
         self.cliFrame = CliFrame(self, defaultNetwork)
         self.cliFrame.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
 
-        self.buttonD = GaugeFrame(self, defaultNetwork)
+        self.buttonD = GaugeFrame(self, defaultNetwork, self.dbcFrame.db)
         self.buttonD.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
     
     def connect_network(self):
@@ -54,51 +56,20 @@ class BasicTab(customtkinter.CTkFrame):
 
     def send_test_message(self):
         # If we're in debugmode, try to send a test message.
-        if isinstance(self.sendNetwork, canopen.Network):            
-            message = self.dbcFrame.db.get_message_by_name('DashInfo')
-            data = message.encode({'StateOfCharge': 100.0, 'ChargingFlag': 0, 'BatteryFaultFlag': 1, 'BatteryTemperature':21, 'Current':75})
-            self.sendNetwork.send_message(message.frame_id, data, False)
-
-class GaugeFrame(customtkinter.CTkFrame):
-    network:canopen.Network
-    def __init__(self, master, network=None):
-        super().__init__(master)
-        self.configure(fg_color="darkslategray", corner_radius=6)
-        
-        # Set the weights
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(2, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-
-        # Create the section header
-        self.gaugesLabel = customtkinter.CTkLabel(self, text="Gauges Frame")
-        self.gaugesLabel.grid(row=0, column=0, columnspan=3, padx=20, pady=10, sticky="w")
-
-        # Create Battery Voltage Gauge
-        self.gauge1 = tk_tools.Gauge(self, min_value=-30, max_value=85.0,
-                       label='Bat Temp', unit='°C', bg="darkslategray")
-        self.gauge1.grid(row=1, column=0, padx=5, pady=5)
-        self.gauge1.set_value(25)
-        self.gauge1._canvas.configure(bg="darkslategray", highlightthickness=0)    
-
-        # Create Battery Current Gauge
-        self.gauge2 = tk_tools.Gauge(self, max_value=100.0,
-            label='Bat Current', unit='A', bg="darkslategray")
-        self.gauge2.grid(row=1, column=1, padx=5, pady=5)
-        self.gauge2.set_value(50)
-        self.gauge2._canvas.configure(bg="darkslategray", highlightthickness=0)
-
-        # Create Battery SoC Gauge
-        self.gauge3 = tk_tools.Gauge(self, max_value=100.0,
-            label='SoC', unit='%', bg="darkslategray")
-        self.gauge3.grid(row=1, column=2, padx=5, pady=5)
-        self.gauge3.set_value(75)
-        self.gauge3._canvas.configure(bg="darkslategray", highlightthickness=0)
-
-        # Create the CreateGauge Button
-        self.createGauge = customtkinter.CTkButton(self, text="Create Gauge")
-        self.createGauge.grid(row=2, columnspan=3, padx=5, pady=5)        
+        if isinstance(self.sendNetwork, canopen.Network):
+            threading.Thread(target=self.test_message_generator, daemon=True).start()     
+    
+    def test_message_generator(self):
+        i = 0
+        while (True):
+            time.sleep(0.1)
+            i+=1
+            if (i <=9):
+                message = self.dbcFrame.db.get_message_by_name('DashInfo')
+                data = message.encode({'StateOfCharge': i*10, 'ChargingFlag': 1, 'BatteryFaultFlag': 1, 'BatteryTemperature':i*3, 'Current':i*20})
+                self.sendNetwork.send_message(message.frame_id, data, False)
+            else:
+                i = 0
 
 class CliFrame(customtkinter.CTkFrame):
     network:canopen.Network
