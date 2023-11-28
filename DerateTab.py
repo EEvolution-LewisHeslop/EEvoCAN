@@ -15,6 +15,7 @@ class DerateTab(customtkinter.CTkFrame):
 
         # Configure layout.
         self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(2, weight=1)
         
@@ -27,7 +28,7 @@ class DerateTab(customtkinter.CTkFrame):
         self.xlabel.grid(row=1, column=1, sticky="n")
 
         # Create Sheet
-        self.table = Sheet(self, theme="dark green", data=values)
+        self.table = Sheet(self, theme="dark green", data=values, table_bg="#2b2b2b", index_bg="#2b2b2b", header_bg="#2b2b2b", top_left_bg="#2b2b2b")
         self.table.enable_bindings()
         self.table.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
         self.table.extra_bindings([("begin_edit_cell", self.begin_edit_cell),
@@ -93,7 +94,7 @@ class DerateTab(customtkinter.CTkFrame):
         self.ax.clear()  # Clear existing plot data
 
         # Set title and axes labels
-        self.ax.set_title("Current(z) by Temperature(x) and SoC(y)")
+        self.ax.set_title("Current(z) by Temperature(x) and SoC(y)", color='white')
         self.ax.set_xlabel("Temperature (degC)")
         self.ax.set_ylabel("SoC (%)")
 
@@ -102,7 +103,7 @@ class DerateTab(customtkinter.CTkFrame):
 
         # Create the colourbar for the current plot
         self.cbar = self.ax.figure.colorbar(im, ax=self.ax)
-        self.cbar.ax.set_ylabel("Current (A)", rotation=-90, va="bottom")
+        self.cbar.ax.set_ylabel("Current (A)", rotation=-90, va="bottom", color="white")
 
         # Determine the interval for ticks (for example, every 5th label)
         tickMax = max (len(self.table.MT._headers), len(self.table.MT._row_index))
@@ -115,9 +116,26 @@ class DerateTab(customtkinter.CTkFrame):
         self.ax.set_yticks(range(0, len(self.table.MT._row_index), y_tick_interval), 
                            labels=self.table.MT._row_index[::y_tick_interval])
         
+        # Colour the figure.
+        self.ax.figure.set_facecolor("#2b2b2b")
+        self.ax.spines['bottom'].set_color('white')
+        self.ax.spines['top'].set_color('white')
+        self.ax.spines['left'].set_color('white')
+        self.ax.spines['right'].set_color('white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        self.ax.title.set_color('white')
+        self.ax.tick_params(axis='x', colors='white')
+        self.ax.tick_params(axis='y', colors='white')
+
+        # Colour the colourbar
+        self.cbar.ax.yaxis.set_tick_params(color='white')
+        self.cbar.outline.set_edgecolor('white')
+        plt.setp(plt.getp(self.cbar.ax.axes, 'yticklabels'), color='white')
+
         # Draw the new plot.
         self.canvas.draw()  # Update the canvas with the new plot
-        self.canvas_widget.grid(row=2, column=2)  # Place the canvas widget if not already placed
+        self.canvas_widget.grid(row=2, column=2, sticky="nsew")  # Place the canvas widget if not already placed
 
     def begin_edit_cell(self, event = None):
         return event.text

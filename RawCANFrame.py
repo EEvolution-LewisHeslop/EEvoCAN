@@ -31,7 +31,7 @@ class RawCANFrame(customtkinter.CTkFrame):
         self.canText.grid(row=1, column=0, columnspan=3 , padx=5, pady=(0,5), sticky="nsew")
         # Add the default text
         self.canText.configure(state='normal')
-        self.canText.insert('end', "Waiting for CAN...")
+        self.canText.insert('end', "Waiting for CAN...\n")
         self.canText.configure(state='disabled')
 
     def assign_listener(self):

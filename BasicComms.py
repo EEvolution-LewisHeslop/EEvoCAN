@@ -112,7 +112,7 @@ class CliFrame(customtkinter.CTkFrame):
         self.cliText.grid(row=1, column=0, columnspan=2, padx=5, pady=(0,5), sticky="nsew")
         # Add the default text
         self.cliText.configure(state='normal')
-        self.cliText.insert('end', "Waiting for Commands...")
+        self.cliText.insert('end', "Waiting for Commands...\n")
         self.cliText.configure(state='disabled')
 
         # Create the entry for the CLI
