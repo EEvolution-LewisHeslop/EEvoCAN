@@ -2,6 +2,7 @@ import customtkinter
 import tk_tools
 import canopen
 from can import Message, Listener, Notifier
+import time
 
 class RawCANFrame(customtkinter.CTkFrame):
     network:canopen.Network = None
@@ -40,18 +41,23 @@ class RawCANFrame(customtkinter.CTkFrame):
 
     def assign_listener(self):
         # Create a listener
-        listener = RawCANListener(self.canText)
+        listener = RawCANListener(self.canText, self.led0)
         self.network.notifier.add_listener(listener)        
         print("Assigned listener to RawCANFrame")
 
 class RawCANListener(Listener):
-    def __init__(self, text:customtkinter.CTkTextbox):
+    def __init__(self, text:customtkinter.CTkTextbox, led:tk_tools.Led):
         self.text=text
+        self.led=led
 
     def on_message_received(self, msg:Message) -> None:
+        self.led.to_green(True)
+        time.sleep(0.02)
         self.text.configure(state='normal')
         self.text.insert('end', str(msg)+"\n")
-        self.text.configure(state='disabled')    
+        self.text.configure(state='disabled')   
+        self.text.see("end") 
+        self.led.to_green(False)
 
     def on_error(self, exc: Exception) -> None:
         print("Error in RawCAN listener: " + exc)
