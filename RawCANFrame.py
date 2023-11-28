@@ -60,4 +60,4 @@ class RawCANListener(Listener):
         self.led.to_green(False)
 
     def on_error(self, exc: Exception) -> None:
-        print("Error in RawCAN listener: " + exc)
+        print("Error in RawCAN listener: " + str(exc))

@@ -20,22 +20,19 @@ class GaugeFrame(customtkinter.CTkFrame):
         self.gaugesLabel.grid(row=0, column=0, columnspan=3, padx=20, pady=10, sticky="w")
 
         # Create Battery Temp Gauge
-        self.gauge1 = tk_tools.Gauge(self, min_value=-30, max_value=85.0,
-                       label='Bat Temp', unit='°C', bg="darkslategray")
+        self.gauge1 = tk_tools.Gauge(self, min_value=-30, max_value=85.0, label='Bat Temp', unit='°C', bg="darkslategray")
         self.gauge1.grid(row=1, column=0, padx=5, pady=5)
         self.gauge1.set_value(25)
         self.gauge1._canvas.configure(bg="darkslategray", highlightthickness=0)    
 
         # Create Battery Current Gauge
-        self.gauge2 = tk_tools.Gauge(self, max_value=100.0,
-            label='Bat Current', unit='A', bg="darkslategray")
+        self.gauge2 = tk_tools.Gauge(self, max_value=100.0, label='Bat Current', unit='A', bg="darkslategray")
         self.gauge2.grid(row=1, column=1, padx=5, pady=5)
         self.gauge2.set_value(50)
         self.gauge2._canvas.configure(bg="darkslategray", highlightthickness=0)
 
         # Create Battery SoC Gauge
-        self.gauge3 = tk_tools.Gauge(self, max_value=100.0,
-            label='SoC', unit='%', bg="darkslategray")
+        self.gauge3 = tk_tools.Gauge(self, max_value=100.0, label='SoC', unit='%', bg="darkslategray")
         self.gauge3.grid(row=1, column=2, padx=5, pady=5)
         self.gauge3.set_value(75)
         self.gauge3._canvas.configure(bg="darkslategray", highlightthickness=0)

@@ -94,10 +94,33 @@ class CliFrame(customtkinter.CTkFrame):
         self.cliText.configure(state='disabled')
 
         # Create the entry for the CLI
-        self.cliEntry = customtkinter.CTkTextbox(self, height=30)
+        self.cliEntry = CliEntry(self, height=30, logBox=self.cliText)
         self.cliEntry.grid(row=2, column=0, columnspan=2, padx=5, pady=(0,5), sticky="ew")
 
         # Create the send button.
         self.cliSend = customtkinter.CTkButton(self, height=30, text="Send")
         self.cliSend.grid(row=2, column=1, padx=5, pady=(0,5))
 
+class CliEntry(customtkinter.CTkTextbox):
+    def __init__(self, master, height, logBox):
+        super().__init__(master, height=height)
+        self.logBox = logBox
+        
+        # Bind enter to send command
+        self.bind('<Return>', self.callback)
+
+    def callback(self, *args):
+        # Get the value on the cursors current row.
+        index = self.index('insert')
+        row, column = index.split('.')
+        rowText = self.get(index1=(row +'.0'), index2=(str(int(row)+1)+'.0'))
+
+        # If there was no text, exit early.
+        if(rowText == "\n"):
+            return "break"
+
+        # Post the command to the CLI log.
+        self.logBox.configure(state='normal')
+        self.logBox.insert('end', str(rowText))
+        self.logBox.configure(state='disabled')   
+        self.logBox.see("end")
