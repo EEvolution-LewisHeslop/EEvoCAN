@@ -102,25 +102,70 @@ class CliFrame(customtkinter.CTkFrame):
         self.cliSend.grid(row=2, column=1, padx=5, pady=(0,5))
 
 class CliEntry(customtkinter.CTkTextbox):
-    def __init__(self, master, height, logBox):
+    historyIndex = 0
+    history = []
+    def __init__(self, master, height, logBox:customtkinter.CTkTextbox):
         super().__init__(master, height=height)
         self.logBox = logBox
         
         # Bind enter to send command
-        self.bind('<Return>', self.callback)
+        self.bind('<Key>', self.callback)
 
-    def callback(self, *args):
+    def callback(self, event, *args):
         # Get the value on the cursors current row.
-        index = self.index('insert')
-        row, column = index.split('.')
-        rowText = self.get(index1=(row +'.0'), index2=(str(int(row)+1)+'.0'))
+        if (event.keysym == 'Up'):
+            if (len(self.history) > self.historyIndex):
+                # Increase history index and set cli value to that element in history.
+                self.historyIndex +=1
+                self.set_text_value(self.history[self.historyIndex-1])
+            else:
+                # Do nothing.
+                return "break"
+        if (event.keysym == 'Down'):
+            if (self.historyIndex > 1):
+                # Decrease history index and set cli value to that element in history.
+                self.historyIndex -=1
+                self.set_text_value(self.history[self.historyIndex-1])
+            elif (self.historyIndex == 1):
+                # Decrease history index and set cli value to blank.
+                self.historyIndex -=1
+                self.set_text_value("")
+            else:
+                # Do nothing
+                return "break"
+        if (event.keysym == 'Return'):
+            # Get the current rowtext.
+            index = self.index('insert')
+            row, column = index.split('.')
+            rowText = self.get(index1=(row +'.0'), index2=(str(int(row)+1)+'.0'))
 
-        # If there was no text, exit early.
-        if(rowText == "\n"):
+            # If there was no text, exit early.
+            if(rowText.strip() == ""):
+                return "break"
+
+            # Add the current text to the history.
+            self.history.insert(0, rowText)
+
+            # Set the history index to 0.
+            self.historyIndex = 0
+
+            # Set the text to nothing.
+            self.set_text_value("")
+
+            # Post command.
+            self.post_command(rowText)
             return "break"
 
+    def post_command(self, command):
         # Post the command to the CLI log.
         self.logBox.configure(state='normal')
-        self.logBox.insert('end', str(rowText))
+        self.logBox.insert('end', str(command))
         self.logBox.configure(state='disabled')   
         self.logBox.see("end")
+
+    # Sets the entry text to the given text value.
+    def set_text_value(self, text):
+        index = self.index('insert')
+        row, column = index.split('.')
+        self.delete(index1=(row +'.0'), index2=(str(int(row)+1)+'.0'))
+        self.insert('end', str(text))
