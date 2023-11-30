@@ -13,13 +13,14 @@ from BasicComms import BasicTab
 from ConfigurationWizard import ConfigurationTab
 from SoftwareLoader import SoftwareTab
 from HwManager import HwManager
+from CommandSystem import CommandSystem
 
 ### Main Window ###
 
 # Creates the GUI, and executes GUI commands.
 class App(customtkinter.CTk):
     # Builds the window and starts any GUI updater, takes the hwManager instance for updating gui with can data
-    def __init__(self, hwManager: HwManager):
+    def __init__(self, hwManager: HwManager, commandSystem: CommandSystem):
         # Create the window
         super().__init__()
         self.title("EEvoCAN")
@@ -31,7 +32,7 @@ class App(customtkinter.CTk):
         self.grid_rowconfigure(1, weight=1)
 
         # Create the tabview
-        self.tabView = MainTabView(self, hwManager)
+        self.tabView = MainTabView(self, hwManager, commandSystem)
         self.tabView.grid(row=0, rowspan=2, column=1, padx=(0,20), pady=(0,20), sticky="nsew")
         
         # Create the device frame
@@ -88,21 +89,22 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
 # Creates the Main Tabview which holds the various main tabs of the application.
 class MainTabView(customtkinter.CTkTabview):
     # Builds the tabview and starts any GUI updaters for the tabs.
-    def __init__(self, master, hwManager: HwManager):
+    def __init__(self, master, hwManager: HwManager, commandSystem: CommandSystem):
             # Create the tabview
             super().__init__(master)
 
             # Build the tabs
-            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab, hwManager=hwManager)
+            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab, hwManager=hwManager, commandSystem=commandSystem)
             FrameBuilder.tab_builder(self, title="Configuration Wizard", tabContent=ConfigurationTab)
-            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab, hwManager=hwManager)
+            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab, commandSystem=commandSystem)
 
             # Select the 2nd tab
             self.set("Configuration Wizard")
 
 # Main Application Startup Logic
 hwManager = HwManager()
+commandSystem = CommandSystem(hwManager)
 customtkinter.set_default_color_theme("green")
 customtkinter.set_appearance_mode("dark")
-app = App(hwManager)
+app = App(hwManager, commandSystem)
 app.mainloop()

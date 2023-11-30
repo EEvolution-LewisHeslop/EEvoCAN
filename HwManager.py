@@ -13,6 +13,7 @@ from usbmonitor.attributes import ID_MODEL
 # Keeps a track of the connected CAN devices and creates canopen networks for the buses that are created.
 # Networks are stored in networkList as (device_id, device_info, interface, network, bus)
 class HwManager():
+    activeNetwork = None
     networkList = []
     deviceCounts = {'ixxat':0, 'kvaser':0, 'pcan':0, 'simplycan':0}
     availableInterfaces = []
@@ -134,13 +135,11 @@ class HwManager():
         network.connect(bustype=interface, channel=channel, bitrate=500000)
         bus = network.bus
         
-        # Create a monitor that watches for errors on the given bus.
-        #listener = ShutdownListener(bus)
-        #notifier = can.Notifier(bus, [listener])
-        #busCleaner = threading.Thread(target=lambda:self.bus_cleaner(bus, listener, notifier), daemon=True).start()
-        
         # Add the bus to the list.
-        self.networkList.append((device_id, device_info, interface, network, bus))
+        networkObject = (device_id, device_info, interface, network, bus)
+        self.networkList.append(networkObject)
+        if (self.networkList[0] is networkObject):
+            self.activeNetwork = self.networkList[0]
 
         # Increment the count of currently connected devices for this interface type.
         self.deviceCounts[interface] += 1
@@ -148,23 +147,5 @@ class HwManager():
         # Notify the user of the added device.
         print(f"Added network of type: {interface}, at channel {channel} for type.")
 
-    def bus_cleaner(self, bus:can.BusABC, listener:can.Listener, notifier:can.Notifier):
-        while listener.exc.empty():
-            time.sleep(0.01)
-        notifier.stop()
-        bus.shutdown()
-
     def get_active_devices(self):
         return self.networkList
-            
-
-# Listens for errors 
-from queue import Queue
-class ShutdownListener(can.Listener):
-    exc = Queue()
-
-    def on_message_received(self, msg: can.Message) -> None:
-        pass
-
-    def on_error(self, exc: Exception) -> None:
-        self.exc.put(exc)
