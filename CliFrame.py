@@ -73,20 +73,15 @@ class CliEntry(customtkinter.CTkTextbox):
             index = self.index('insert')
             row, column = index.split('.')
             rowText = self.get(index1=(row +'.0'), index2=(str(int(row)+1)+'.0'))
-
             # If there was no text, exit early.
             if(rowText.strip() == ""):
                 return "break"
-
             # Add the current text to the history.
             self.history.insert(0, rowText)
-
             # Set the history index to 0.
             self.historyIndex = 0
-
             # Set the text to nothing.
             self.set_text_value("")
-
             # Send the command to the command system
             self.commandSystem.process_command(rowText)
             return "break"
