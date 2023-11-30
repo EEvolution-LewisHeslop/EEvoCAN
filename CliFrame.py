@@ -88,14 +88,14 @@ class CliEntry(customtkinter.CTkTextbox):
             self.set_text_value("")
 
             # Send the command to the command system
-            status, logText, output = self.commandSystem.process_command(rowText)
+            self.commandSystem.process_command(rowText)
             return "break"
 
     def log_changed(self):
         # Post the result to the CLI log.
+        command, result, response, output  = self.commandSystem.log[0]
         self.logBox.configure(state='normal')
-        self.logBox.delete(1.0, 'end')
-        self.logBox.insert('end', '\n'.join(reversed(self.commandSystem.log)))
+        self.logBox.insert('end', command + '\n' + response + '\n')
         self.logBox.configure(state='disabled')   
         self.logBox.see('end')
 

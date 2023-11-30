@@ -1,11 +1,8 @@
 # 06/11/2023 - LH - Created EEvoCAN.py
 # This will serve as the main entrypoint of the EEvoCAN application.
-# In the beginning it will be used to test the Python CAN library for this application.
 import customtkinter
 import threading
 import time
-
-from usbmonitor.attributes import ID_MODEL, ID_SERIAL
 
 import FrameBuilder
 import PrefManager
@@ -15,11 +12,11 @@ from SoftwareLoader import SoftwareTab
 from HwManager import HwManager
 from CommandSystem import CommandSystem
 
-### Main Window ###
 
 # Creates the GUI, and executes GUI commands.
 class App(customtkinter.CTk):
-    # Builds the window and starts any GUI updater, takes the hwManager instance for updating gui with can data
+    # Builds the window and starts any GUI updater.
+    # Takes the hwManager instance for updating gui with can data.
     def __init__(self, hwManager: HwManager, commandSystem: CommandSystem):
         # Create the window
         super().__init__()
@@ -33,17 +30,29 @@ class App(customtkinter.CTk):
 
         # Create the tabview
         self.tabView = MainTabView(self, hwManager, commandSystem)
-        self.tabView.grid(row=0, rowspan=2, column=1, padx=(0,20), pady=(0,20), sticky="nsew")
-        
+        self.tabView.grid(
+            row=0,
+            rowspan=2,
+            column=1,
+            padx=(0, 20),
+            pady=(0, 20),
+            sticky="nsew")
+
         # Create the device frame
         self.device_frame = DeviceFrame(self)
         self.device_frame.configure(width=100)
-        self.device_frame.grid(row=1, column = 0, padx=20, pady=(15,0), sticky="nw")
-        
-        # Every now and then, capture the screen state location.
-        threading.Thread(target=lambda: PrefManager.save_window_state(self), daemon=True).start()        
+        self.device_frame.grid(
+            row=1,
+            column=0,
+            padx=20,
+            pady=(15, 0),
+            sticky="nw")
 
-### Device Frame ###
+        # Every now and then, capture the screen state location.
+        threading.Thread(
+            target=lambda:
+                PrefManager.save_window_state(self), daemon=True).start()
+
 
 # Creates a frame that monitors when a device is plugged in etc.
 class DeviceFrame(customtkinter.CTkScrollableFrame):
@@ -52,11 +61,15 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
         super().__init__(master)
 
         # Create the header.
-        self.device_list_header = customtkinter.CTkLabel(self, text="Device List:")
+        self.device_list_header = customtkinter.CTkLabel(
+            self,
+            text="Device List:")
         self.device_list_header.grid(row=0, column=0, sticky="nw")
 
         # Create the list text.
-        self.device_list = customtkinter.CTkLabel(self, text="Waiting for input.")
+        self.device_list = customtkinter.CTkLabel(
+            self,
+            text="Waiting for input.")
         self.device_list.grid(row=1, column=0, sticky="nw")
 
         # Start the list updater thread
@@ -78,28 +91,43 @@ class DeviceFrame(customtkinter.CTkScrollableFrame):
                     i = 0
                     self.device_list.configure(text="No devices.")
                 time.sleep(1)
-            except:
-                print("Failed to update device list.")
-                for thread in threading.enumerate(): 
+            except Exception as e:
+                print(f"Failed to update device list: {e}")
+                for thread in threading.enumerate():
                     print(thread.name)
                 return
 
-### Main Tab View ###
 
-# Creates the Main Tabview which holds the various main tabs of the application.
+# Creates the Main Tabview which holds
+# the various main tabs of the application.
 class MainTabView(customtkinter.CTkTabview):
     # Builds the tabview and starts any GUI updaters for the tabs.
-    def __init__(self, master, hwManager: HwManager, commandSystem: CommandSystem):
-            # Create the tabview
-            super().__init__(master)
+    def __init__(
+            self,
+            master,
+            hwManager: HwManager,
+            commandSystem: CommandSystem):
+        # Create the tabview
+        super().__init__(master)
+        # Build the tabs
+        FrameBuilder.tab_builder(
+            self,
+            title="Basic Comms",
+            tabContent=BasicTab,
+            hwManager=hwManager,
+            commandSystem=commandSystem)
+        FrameBuilder.tab_builder(
+            self,
+            title="Configuration Wizard",
+            tabContent=ConfigurationTab)
+        FrameBuilder.tab_builder(
+            self,
+            title="Software Loader",
+            tabContent=SoftwareTab,
+            commandSystem=commandSystem)
+        # Select the 2nd tab
+        self.set("Configuration Wizard")
 
-            # Build the tabs
-            FrameBuilder.tab_builder(self, title="Basic Comms", tabContent=BasicTab, hwManager=hwManager, commandSystem=commandSystem)
-            FrameBuilder.tab_builder(self, title="Configuration Wizard", tabContent=ConfigurationTab)
-            FrameBuilder.tab_builder(self, title="Software Loader", tabContent=SoftwareTab, commandSystem=commandSystem)
-
-            # Select the 2nd tab
-            self.set("Configuration Wizard")
 
 # Main Application Startup Logic
 hwManager = HwManager()

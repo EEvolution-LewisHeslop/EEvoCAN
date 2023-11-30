@@ -1,14 +1,15 @@
 from CTkTable import CTkTable
 from tksheet import Sheet
 
+
 # Handles the resizing of the x and y values of the derate tables.
 class ResizeHandler():
-    chargeSocAxis:CTkTable = None
-    chargeTemperatureAxis:CTkTable = None
-    dischargeSocAxis:CTkTable = None
-    dischargeTemperatureAxis:CTkTable = None
-    chargeTable:Sheet = None
-    dischargeTable:Sheet = None
+    chargeSocAxis: CTkTable = None
+    chargeTemperatureAxis: CTkTable = None
+    dischargeSocAxis: CTkTable = None
+    dischargeTemperatureAxis: CTkTable = None
+    chargeTable: Sheet = None
+    dischargeTable: Sheet = None
 
     @classmethod
     def setAxisReference(cls, axis, isSoc=False, isCharge=False):
@@ -36,31 +37,43 @@ class ResizeHandler():
         if (isCharge):
             for i in cls.chargeSocAxis.values[0]:
                 if (str(i).strip() == ''):
-                    print("Failed to update axis: Charge SoC Axis Incomplete")
+                    print("Failed to update axis: "
+                          "Charge SoC Axis Incomplete")
                     return
             for i in cls.chargeTemperatureAxis.values[0]:
                 if (str(i).strip() == ''):
-                    print("Failed to update axis: Charge Temperature Axis Incomplete")
+                    print("Failed to update axis: "
+                          "Charge Temperature Axis Incomplete")
                     return
         else:
             for i in cls.dischargeSocAxis.values[0]:
                 if (str(i).strip() == ''):
-                    print("Failed to update axis: Discharge SoC Axis Incomplete")
+                    print("Failed to update axis: "
+                          "Discharge SoC Axis Incomplete")
                     return
             for i in cls.dischargeTemperatureAxis.values[0]:
                 if (str(i).strip() == ''):
-                    print("Failed to update axis: Discharge Temperature Axis Incomplete")
+                    print("Failed to update axis: "
+                          "Discharge Temperature Axis Incomplete")
                     return
-                
+
         # Update the relevant table.
         if (isCharge):
-            cls.chargeTable.headers(newheaders=cls.chargeTemperatureAxis.values[0], redraw=True)
-            cls.chargeTable.row_index(newindex=cls.chargeSocAxis.values[0], redraw=True)
+            cls.chargeTable.headers(
+                newheaders=cls.chargeTemperatureAxis.values[0],
+                redraw=True)
+            cls.chargeTable.row_index(
+                newindex=cls.chargeSocAxis.values[0],
+                redraw=True)
             cls.chargeTable.set_sheet_data(data=[[]])
             cls.chargeTable.set_all_column_widths(30)
         else:
-            cls.dischargeTable.headers(newheaders=cls.dischargeTemperatureAxis.values[0], redraw=True)
-            cls.dischargeTable.row_index(newindex=cls.dischargeSocAxis.values[0], redraw=True)
+            cls.dischargeTable.headers(
+                newheaders=cls.dischargeTemperatureAxis.values[0],
+                redraw=True)
+            cls.dischargeTable.row_index(
+                newindex=cls.dischargeSocAxis.values[0],
+                redraw=True)
             cls.dischargeTable.set_sheet_data(data=[[]])
             cls.dischargeTable.set_all_column_widths(30)
 
