@@ -1,6 +1,6 @@
 import customtkinter
 import canopen
-import tk_tools
+from gaugemod import Gauge
 import cantools
 
 
@@ -31,7 +31,7 @@ class GaugeFrame(customtkinter.CTkFrame):
             sticky="w")
 
         # Create Battery Temp Gauge
-        self.gauge1 = tk_tools.Gauge(
+        self.gauge1 = Gauge(            
             self,
             min_value=-30,
             max_value=85.0,
@@ -45,7 +45,7 @@ class GaugeFrame(customtkinter.CTkFrame):
             highlightthickness=0)
 
         # Create Battery Current Gauge
-        self.gauge2 = tk_tools.Gauge(
+        self.gauge2 = Gauge(
             self,
             max_value=100.0,
             label='Bat Current',
@@ -56,7 +56,7 @@ class GaugeFrame(customtkinter.CTkFrame):
         self.gauge2._canvas.configure(bg="darkslategray", highlightthickness=0)
 
         # Create Battery SoC Gauge
-        self.gauge3 = tk_tools.Gauge(
+        self.gauge3 = Gauge(
             self,
             max_value=100.0,
             label='SoC',
