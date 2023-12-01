@@ -6,9 +6,11 @@ import time
 
 import FrameBuilder
 import PrefManager
+from HomePage import HomeTab
 from BasicComms import BasicTab
 from ConfigurationWizard import ConfigurationTab
 from SoftwareLoader import SoftwareTab
+from TestInterface import TestInterfaceTab
 from HwManager import HwManager
 from CommandSystem import CommandSystem
 
@@ -112,6 +114,10 @@ class MainTabView(customtkinter.CTkTabview):
         # Build the tabs
         FrameBuilder.tab_builder(
             self,
+            title="Home",
+            tabContent=HomeTab)
+        FrameBuilder.tab_builder(
+            self,
             title="Basic Comms",
             tabContent=BasicTab,
             hwManager=hwManager,
@@ -125,6 +131,10 @@ class MainTabView(customtkinter.CTkTabview):
             title="Software Loader",
             tabContent=SoftwareTab,
             commandSystem=commandSystem)
+        FrameBuilder.tab_builder(
+            self,
+            title="Test Interfaces",
+            tabContent=TestInterfaceTab)
         # Select the 2nd tab
         self.set("Configuration Wizard")
 

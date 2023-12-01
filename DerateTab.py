@@ -46,7 +46,9 @@ class DerateTab(customtkinter.CTkFrame):
             table_bg="#2b2b2b",
             index_bg="#2b2b2b",
             header_bg="#2b2b2b",
-            top_left_bg="#2b2b2b")
+            top_left_bg="#2b2b2b",
+            show_x_scrollbar=True,
+            show_y_scrollbar=True)
         self.table.enable_bindings()
         self.table.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
         startEditBinding = ("begin_edit_cell", self.begin_edit_cell)
@@ -72,11 +74,12 @@ class DerateTab(customtkinter.CTkFrame):
             self, text="Interpolate",
             command=lambda: self.interpolate_values(self.table))
         self.interpolateButton.grid(
-            row=3,
+            row=0,
             column=0,
             columnspan=2,
             padx=5,
-            pady=5)
+            pady=5,
+            sticky="e")
 
         # Resize
         ResizeHandler.update_axis(charge)
