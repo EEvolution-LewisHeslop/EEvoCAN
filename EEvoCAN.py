@@ -135,8 +135,8 @@ class MainTabView(customtkinter.CTkTabview):
             self,
             title="Test Interfaces",
             tabContent=TestInterfaceTab)
-        # Select the 2nd tab
-        self.set("Configuration Wizard")
+        # Select the home tab
+        self.set("Home")
 
 
 # Main Application Startup Logic
