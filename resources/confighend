@@ -1,0 +1,40 @@
+  
+  static uint8_t cells[slaveBoards];
+
+  static uint8_t thermistors[slaveBoards];
+
+  static uint8_t populatedThermistors[slaveBoards][thermistorsPerSlave]; //!<the populated thermistors
+
+  /**
+   * @brief BMS config setup utility
+   * 
+   * This function populates several arrays based on other config data
+   * 
+   */
+  inline void BMSconfigUtility()
+  {
+    for (uint8_t i = 0; i < slaveBoards; i++) 
+    {
+      cells[i] = cellsPerSlave[i];
+      thermistors[i] = thermistorsPerSlave;
+    }
+
+    //if all thermistors positions are populated the same on each board you can use this code, otherwise
+    //it needs to be done manually
+    uint8_t popThermTemp[thermistorsPerSlave] = {0,1,2,3,4,5,6,7,8,9,10,11};
+    for (uint8_t i = 0; i < slaveBoards; i++)
+    {
+      for (uint8_t j = 0; j < thermistorsPerSlave; j++)
+      {
+        populatedThermistors[i][j] = popThermTemp[j];
+      }
+    }
+  } 
+
+//maximum and minimum voltage
+const float maxPackVoltage = maxCellVoltageLimit * totalCells; //!<calculated maximum pack voltate
+const float minPackVoltage = minCellVoltageLimit * totalCells; //!<calculated minimum pack voltage
+
+}
+
+#endif

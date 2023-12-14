@@ -1,0 +1,30 @@
+/*
+  BMS_Config.h
+  Configuration and limit values for the BMS for Gen 5 Battery chemistry
+  Created by Lewis Heslop and Ganesh Kumar Mukilan July 2023
+*/
+#pragma once
+#ifndef BMS_Config_h
+#define BMS_Config_h
+
+
+/*! \namespace config
+ * \brief The namespace containing all the BPM configuration parameters.
+ *
+ * This namespace acts as the configuration file for the BPM, allowing the battery configuration to be changed.
+ */
+namespace config
+{
+  extern float maxDischargingCurrent;                //the maximum allowed discharging current allowed at the present time, including derating
+  extern float maxChargingCurrent;                   //the maximum allowed charging current allowed at the present time, including derating
+  extern float softLimitDischargingCurrent;                //the maximum allowed discharging current allowed at the present time, including derating
+  extern float softLimitChargingCurrent;                   //the maximum allowed charging current allowed at the present time, including derating
+
+  extern float customerDischargingCurrent;                      //the maximum allowed discharging current allowed at the present time, including derating
+  extern float customerChargingCurrent;                         //the maximum allowed charging current allowed at the present time, including derating
+
+  extern float customerDischargingMotorCurrent;             //the maximum allowed charging current allowed at the present time, including derating for any given motor (customerDischargingCurrent / numberOfDriveMotors)
+
+  extern uint8_t derateFactor;           //derate factor currently in effect (as a percentage of the maximum)
+  extern uint8_t derateFactorCharging;
+  

@@ -4,6 +4,11 @@ from CTkTable import CTkTable
 from ResizeHandler import ResizeHandler
 from Interpolation import Interpolation
 
+from enum import Enum
+DataTypesEnum = Enum(
+    value='DataTypesEnum',
+    names='float uint8_t int8_t uint16_t')
+
 
 # Creates the parameter subtab
 class ParameterTab(customtkinter.CTkScrollableFrame):
@@ -120,6 +125,17 @@ class ParameterTab(customtkinter.CTkScrollableFrame):
             padx=5,
             pady=(0, 5),
             sticky="nsew")
+
+    # Grabs all parameter data as a list of tuples with name and value
+    def get_parameters(self):
+        print("Getting parameters")
+        # Get the simple parameters
+        simpleParameters = self.simpleParamFrame.get_parameters()
+        voltageRangeParameter = self.voltageRangeFrame.get_parameter()
+        slaveBoardParameter = self.slaveBoardFrame.get_parameter()
+        simpleParameters.update(voltageRangeParameter)
+        simpleParameters.update(slaveBoardParameter)
+        return simpleParameters
 
 
 # Parameter Tab Range Frame
@@ -255,6 +271,11 @@ class RangeFrame(customtkinter.CTkFrame):
             pady=5,
             sticky="w")
 
+    def get_parameter(self):
+        name = self.frameHeading._text
+        values = self.table.values
+        return {name: (values, DataTypesEnum.float.name, 'SoClookup')}
+
 
 # Parameter Tab Simple Parameter Frame
 class SimpleParamsFrame(customtkinter.CTkFrame):
@@ -265,25 +286,25 @@ class SimpleParamsFrame(customtkinter.CTkFrame):
         # against their string variables and indentation,
         # currently this is based on hardcoded values. TODO
         paramDict = {
-            "Minimum Cell Voltage Limit (V)": (customtkinter.StringVar(self, "3.2"), True),
-            "Maximum Cell Voltage Limit (V)": (customtkinter.StringVar(self, "4.35"), False),
-            "Minimum Cell Temperature Limit (degC)": (customtkinter.StringVar(self, "-30"), True),
-            "Maximum Cell Temperature Limit (degC)": (customtkinter.StringVar(self, "60"), False),
-            "Maximum Discharging Current Limit (A)": (customtkinter.StringVar(self, "2000"), True),
-            "Maximum Charging Current Limit (A)": (customtkinter.StringVar(self, "510"), False),
-            "Maximum Charging Current Limit on Charger (A)": (customtkinter.StringVar(self, "250"), False),
-            "Soft Discharging Current Limit (A)": (customtkinter.StringVar(self, "1200"), True),
-            "Soft Charging Current Limit (A)": (customtkinter.StringVar(self, "245"), False),
-            "Customer Discharging Current Limit (A)": (customtkinter.StringVar(self, "1080"), True),
-            "Customer Charging Current Limit (A)": (customtkinter.StringVar(self, "140"), False),
-            "Number of drive motors": (customtkinter.StringVar(self, "1"), True),
-            "System Capacity (Ah)": (customtkinter.StringVar(self, "158.8"), True),
-            "Customer 0% SoC (% of true SoC)": (customtkinter.StringVar(self, "10"), False),
-            "Customer 100% SoC (% of true SoC)": (customtkinter.StringVar(self, "95"), False),
-            "End of charge SoC (%)": (customtkinter.StringVar(self, "100"), False),
-            "OBC Charging AC Current Limit (A)": (customtkinter.StringVar(self, "32"), True),
-            "OBC Charging DC Current Limit (A)": (customtkinter.StringVar(self, "40"), False),
-            "CAN Message Timeout (ms)": (customtkinter.StringVar(self, "100"), True),
+            "Minimum Cell Voltage Limit (V)": ("3.2", DataTypesEnum.float.name, 'minCellVoltageLimit'),
+            "Maximum Cell Voltage Limit (V)": ("4.35", DataTypesEnum.float.name, 'maxCellVoltageLimit'),
+            "Minimum Cell Temperature Limit (degC)": ("-30", DataTypesEnum.float.name, 'minCellTemperatureLimit'),
+            "Maximum Cell Temperature Limit (degC)": ("60", DataTypesEnum.float.name, 'maxCellTemperatureLimit'),
+            "Maximum Discharging Current Limit (A)": ("2000", DataTypesEnum.float.name, 'maxDischargingCurrentLimit'),
+            "Maximum Charging Current Limit (A)": ("510", DataTypesEnum.float.name, 'maxChargingCurrentLimit'),
+            "Maximum Charging Current Limit on Charger (A)": ("250", DataTypesEnum.float.name, 'maxChargingCurrentLimitCharger'),
+            "Soft Discharging Current Limit (A)": ("1200", DataTypesEnum.float.name, 'softLimitDischargingCurrentLimit'),
+            "Soft Charging Current Limit (A)": ("245", DataTypesEnum.float.name, 'softLimitChargingCurrentLimit'),
+            "Customer Discharging Current Limit (A)": ("1080", DataTypesEnum.float.name, 'customerDischargingCurrentLimit'),
+            "Customer Charging Current Limit (A)": ("140", DataTypesEnum.float.name, 'customerChargingCurrentLimit'),
+            "Number of drive motors": ("1", DataTypesEnum.float.name, 'numberOfDriveMotors'),
+            "System Capacity (Ah)": ("158.8", DataTypesEnum.float.name, 'chargeCapacity'),
+            "Customer 0% SoC (% of true SoC)": ("10", DataTypesEnum.float.name, 'customerSoC0'),
+            "Customer 100% SoC (% of true SoC)": ("95", DataTypesEnum.float.name, 'customerSoC100'),
+            "End of charge SoC (%)": ("100", DataTypesEnum.float.name, 'endChargeSoC'),
+            "OBC Charging AC Current Limit (A)": ("32", DataTypesEnum.float.name, 'IacMax'),
+            "OBC Charging DC Current Limit (A)": ("40", DataTypesEnum.float.name, 'IdcMax'),
+            "CAN Message Timeout (ms)": ("100", DataTypesEnum.float.name, 'maxCycles'),
             }
 
         # Configure the frame.
@@ -301,26 +322,33 @@ class SimpleParamsFrame(customtkinter.CTkFrame):
 
         # Add Items from the dict as elements in the frame.
         for index, (key, value) in enumerate(paramDict.items()):
-            self.simple_param_builder(value[0], key, value[1], index+1)
+            self.simple_param_builder(
+                value[0],
+                key,
+                value[1],
+                value[2],
+                index+1)
 
     # Builds a simple param.
     def simple_param_builder(
             self,
-            stringVar: customtkinter.StringVar,
+            heading,
             labelText,
-            doubleSpace=False,
+            dataType,
+            trueValueText,
             gridRow=0):
-        if (doubleSpace):
-            padyValue = 5
-        else:
-            padyValue = (0, 5)
+        stringVar = customtkinter.StringVar(self, heading)
         label = customtkinter.CTkLabel(self, text=labelText)
-        label.grid(row=gridRow, column=0, padx=5, pady=padyValue, sticky="w")
+        label.grid(row=gridRow, column=0, padx=5, pady=(0, 5), sticky="w")
+        types = [option.name for option in DataTypesEnum]
+        dropdown = customtkinter.CTkComboBox(self, values=types)
+        dropdown.set(dataType)
+        dropdown.grid(row=gridRow, column=1, padx=5, pady=(0, 5))
         textEntry = customtkinter.CTkEntry(self, textvariable=stringVar)
         textEntry.grid(row=gridRow,
-                       column=1,
+                       column=2,
                        padx=5,
-                       pady=padyValue,
+                       pady=(0, 5),
                        sticky="w")
         stringVar.trace_add(
             'write',
@@ -330,6 +358,40 @@ class SimpleParamsFrame(customtkinter.CTkFrame):
                 trace_mode,
                 stringVar,
                 float))
+        trueValue = customtkinter.CTkLabel(self, text=trueValueText)
+        trueValue.grid(row=gridRow, column=3, padx=5, pady=(0, 5))
+
+    # Returns the active parameters.
+    def get_parameters(self):
+        lastLabel = customtkinter.CTkLabel
+        lastCombo = customtkinter.CTkComboBox
+        lastEntry = customtkinter.CTkEntry
+        lastAlias = customtkinter.CTkLabel
+        labelFound = False
+        parameters = {}
+        for row in self.children.values():
+            if type(row) is customtkinter.CTkLabel:
+                if not labelFound:
+                    lastLabel = row
+                    labelFound = True
+                else:
+                    lastAlias = row
+                    try:
+                        parameters.update({
+                            lastLabel._text: (
+                                lastEntry._textvariable.get(),
+                                lastCombo.get(),
+                                lastAlias._text)})
+                        labelFound = False
+                    except Exception as e:
+                        print("Processing header of parameters. "
+                              "Could this be done better?" + e)
+                        lastLabel = row
+            if type(row) is customtkinter.CTkComboBox:
+                lastCombo = row
+            if type(row) is customtkinter.CTkEntry:
+                lastEntry = row
+        return parameters
 
 
 # Parater Tab Slave Board Configuration Frame
@@ -466,6 +528,30 @@ class SlaveBoardFrame(customtkinter.CTkFrame):
                 trace_mode,
                 self.thermistorsPerSlave,
                 float))
+
+    def get_parameter(self):
+        slaveCount = self.resolutionEntryBox.get()
+        slaveValues = self.table.values
+        slaveValuesFloat = [int(x) for x in slaveValues[0]]
+        totalCells = sum(slaveValuesFloat)
+        thermistorsPerSlave = self.thermistorsPerSlaveTextEntry.get()
+        return {
+            "Slave Boards": (
+                slaveCount,
+                DataTypesEnum.uint8_t.name,
+                'slaveBoards'),
+            "Cells per slave": (
+                slaveValues,
+                DataTypesEnum.uint8_t.name,
+                'cellsPerSlave'),
+            "Total Cells": (
+                totalCells,
+                DataTypesEnum.uint8_t.name,
+                'totalCells'),
+            "Thermistors per Slave": (
+                thermistorsPerSlave,
+                DataTypesEnum.uint8_t.name,
+                'thermistorsPerSlave')}
 
 
 def inputValidator(
