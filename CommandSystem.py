@@ -101,7 +101,10 @@ class Helpers():
     # Tries to get a node by id on a given network.
     def get_node_on_network_by_id(self, network: canopen.Network, nodeId):
         try:
-            node = network.nodes[nodeId-1]
+            if (len(network.nodes) == 0):
+                # The node wasn't found, warn but try to create the node.
+                network.add_node(1, None)
+            node = network.nodes.get(int(nodeId))
             return ("OK", node)
         except Exception:
             error = "Node not found on given network."
@@ -109,15 +112,17 @@ class Helpers():
 
     # Gets the memory info from the given memory identifier.
     def get_memory_info(self, mem):
+        error = None
+        result = None
         #                Start    End      Len      Page     Pad   RW    BL_ID
         match mem:
-            case "APP":
+            case "app":
                 result = [0x10000, 0x3FFFF, 0x30000, 0x1000,  0xFF, "WO", 0x01]
-            case "APPDATA":
+            case "appdata":
                 result = [0x40000, 0x41FFF, 0x2000,  0x1000,  0x00, "RW", 0x02]
-            case "PRODDATA":
+            case "proddata":
                 result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x03]
-            case "FRAM":
+            case "fram":
                 result = [0x0,     0x0FFF,  0x1000,  0x1000,  0x00, "RW", 0x04]
             case "default":
                 result = None
@@ -160,7 +165,7 @@ class Helpers():
                 finished = True
             elif type_ == 0x02:
                 address_msb = int(data, 16) << 4
-                print(f"Type 02: data = {data}, "
+                print(f"Type 02 : data = {data}, "
                       f"address_msb = {address_msb:08x}")
             elif type_ == 0x03:
                 print(f"Type 03: Byte count = {byte_count}, "
@@ -178,7 +183,7 @@ class Helpers():
                 finished = True
                 raise ValueError(f"Error: Unexpected type ({type_})")
             line_no += 1
-        return sorted(byteList)
+        return byteList
 
 
 # Contains all available commands.
@@ -264,6 +269,8 @@ class Commands():
             nodeId=nodeId)
         if (error != "OK"):
             return (False, errStr + error, None)
+        # 
+
         # Send the SDO
         try:
             # Write sdo
@@ -395,11 +402,11 @@ class Commands():
             return (False, errStr, None)
         # Read the file contents.
         with open(hexfileName) as file:
-            fileContent = file.readlines()
+            fileContent = file.read()
         # Convert filecontents to ordered byte value dictionary
         # with address as key.
         try:
-            hexByteArray: dict = self.hex_file_to_byte_array(self, fileContent)
+            hexByteArray: dict = self.helpers.hex_file_to_byte_array(fileContent)
         except Exception as e:
             errStr += f"File was not of hex type: {e}"
             return (False, errStr, None)
@@ -410,25 +417,25 @@ class Commands():
             [nodeId, 0x5FF0, 1, cmd_bytes, networkId])
         if (not result):
             errStr += (f"Attempt to set memory ({memorySpace}, {blMemId})"
-                       f"into write mode (0x04) failed with result: {result}")
+                       f"into write mode (0x04) failed with error: {error}")
             return (False, errStr, None)
         # Pad out hex array to 4kB boundary.
-        paddedMaxAddr = hexByteArray.keys[-1]
+        paddedMaxAddr = list(hexByteArray)[-1]
         while (paddedMaxAddr + 1 - deviceStartAddress) % pageLength != 0:
             paddedMaxAddr += 1
             hexByteArray[paddedMaxAddr] = pad
         # Send the data in 4kB blocks.
         byteList = []
-        i = hexByteArray.keys[0]
+        i = list(hexByteArray)[0]
         while i <= paddedMaxAddr:
             byteList.append(hexByteArray.get(i, pad))
             if len(byteList) >= pageLength:
-                data = ' '.join(map(str, byteList))
+                data = bytearray(byteList)
                 sdoResponse = self.sdo_w([nodeId, 0x5FF0, 2, data, networkId])
                 result, error, output = sdoResponse
                 if (not result):
-                    errStr += ("Attempt to write Application memory to"
-                               f"domain object failed with result: {result}")
+                    errStr += ("Attempt to write Application memory to "
+                               f"domain object failed with error: {error}")
                     return (False, errStr, None)
                 # Clear byteList for the next 4kB
                 byteList = []
