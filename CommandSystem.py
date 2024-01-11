@@ -18,7 +18,6 @@ class CommandSystem():
     def __init__(self, hwManager: HwManager):
         self.hwManager = hwManager
         self.helpers = Helpers(hwManager)
-        self.commands = Commands(self.helpers)
         self.log = deque([], 1000)
         self.logChangedCallbacks = []
 
@@ -30,11 +29,11 @@ class CommandSystem():
         commandParts = commandText.split(' ')
         try:
             commandName = commandParts.pop(0).strip()
-            command = self.commands.__getattribute__(commandName)
+            command = self.__getattribute__(commandName)
         except Exception:
             error = f"Unrecognized command: {commandName}"
             try:
-                commandParts.insert(0, "self.commands")
+                commandParts.insert(0, "self")
                 func = f"{commandName}({','.join(commandParts)})"
                 exec(func, globals(), locals())
                 return
@@ -52,156 +51,7 @@ class CommandSystem():
             return (False, error, None)
         return result
 
-    # Adds logLine (Command, Result, Response, Output) to the log
-    # and calls the subscribed callbacks
-    def update_log(self, logLine):
-        self.log.appendleft(logLine)
-        for callback in self.logChangedCallbacks:
-            try:
-                callback()
-            except Exception as e:
-                print(f"Error in log changed callback {callback}:\n{e}")
-
-    # Adds a callback to be called when the log changes.
-    def add_log_changed_callback(self, callback: callable):
-        self.logChangedCallbacks.append(callback)
-
-
-# Contains common operations performed within commands.
-class Helpers():
-    def __init__(self, hwManager: HwManager):
-        self.hwManager = hwManager
-
-    # Checks to see if enough args were provided and returns
-    # and unpackable array based on given mandatory and optional counts.
-    def process_args(self, args: list, mandatory = 0, optional = 0):
-        argsCount = len(args)
-        maxArgs = mandatory + optional
-        args.insert(0, "OK")
-        if (argsCount < mandatory):
-            args[0] = (f"Too few arguments: Expected minimum of {mandatory} "
-                       f"arguments but found {argsCount}.")
-        if (argsCount > maxArgs):
-            args = args[:maxArgs+1]
-            args[0] = (f"Too many arguments: Expected maximum of {maxArgs} "
-                       f"arguments but found {argsCount}.")
-        if (argsCount < maxArgs):
-            fillOptionalArgs = [None] * (maxArgs - (argsCount))
-            args.extend(fillOptionalArgs)
-        return args
-
-    # Tries to get a network by id.
-    def get_network_by_id(self, networkId):
-        # Check to see if a networkId was specified,
-        # if not, use the active network.
-        networkObject = None
-        if (networkId is None):
-            if (self.hwManager.activeNetwork is None):
-                error = "No network specified and no default network assigned."
-                return (error, None)
-            else:
-                networkId = 1
-        try:
-            networkObject = self.hwManager.networkList[networkId-1]
-            return ("OK", networkObject[3])
-        except Exception as e:
-            error = f"Specified network not available.\n{e}"
-            return (error, None)
-
-    # Tries to get a node by id on a given network.
-    def get_node_on_network_by_id(self, network: canopen.Network, nodeId):
-        try:
-            if (len(network.nodes) == 0):
-                # The node wasn't found, warn but try to create the node.
-                network.add_node(1, None)
-            node = network.nodes.get(int(nodeId))
-            return ("OK", node)
-        except Exception:
-            error = "Node not found on given network."
-            return (error, None)
-
-    # Gets the memory info from the given memory identifier.
-    def get_memory_info(self, mem):
-        error = None
-        result = None
-        #                Start    End      Len      Page     Pad   RW    BL_ID
-        match mem:
-            case "app":
-                result = [0x10000, 0x3FFFF, 0x30000, 0x1000,  0xFF, "WO", 0x01]
-            case "appdata":
-                result = [0x40000, 0x41FFF, 0x2000,  0x1000,  0x00, "RW", 0x02]
-            case "proddata":
-                result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x03]
-            case "fram":
-                result = [0x0,     0x01FF,  0x200,   0x200,   0x00, "RW", 0x04]
-            case "default":
-                result = None
-        if not result:
-            error = "Available memories are: APP, APPDATA, PRODDATA, FRAM"
-        return (error, result)
-
-    # Converts the given hexFileContents into byteList;
-    # a dictionary where the indexer is the byte address
-    # and the value is the byte at that address.
-    def hex_file_to_byte_array(self, hexFileContents):
-        hex_code = hexFileContents.split('\n')
-        hex_code_len = len(hex_code)
-        if hex_code_len == 0:
-            raise ValueError("Not enough data: {}".format(hex_code_len))
-        line_no = 0
-        finished = False
-        address_msb = -1
-        tot_byte_count = 0
-        byteList = {}
-        while line_no <= hex_code_len and not finished:
-            line = hex_code[line_no]
-            byte_count = int(line[1:3], 16)
-            address = int(line[3:7], 16)
-            type_ = int(line[7:9], 16)
-            data = line[9:-2]
-            checksum = int(line[-2:], 16)
-            # Handling different types
-            if type_ == 0x00:
-                if address_msb == -1:
-                    error = "Data received before new section started"
-                    raise ValueError(error)
-                byte_address = address_msb + address
-                for byte in range(byte_count):
-                    byte_data = data[byte*2:(byte*2)+2]
-                    byteList[byte_address] = int(byte_data, 16)
-                    byte_address += 1
-                    tot_byte_count += 1
-            elif type_ == 0x01:
-                finished = True
-            elif type_ == 0x02:
-                address_msb = int(data, 16) << 4
-                print(f"Type 02 : data = {data}, "
-                      f"address_msb = {address_msb:08x}")
-            elif type_ == 0x03:
-                print(f"Type 03: Byte count = {byte_count}, "
-                      f"address = {address}, type = {type_}, "
-                      f"data = {data}, checksum = {checksum}")
-            elif type_ == 0x04:
-                address_msb = int(data, 16) << 16
-                print(f"Type 04: data = {data}, "
-                      f"address_msb = {address_msb:08x}")
-            elif type_ == 0x05:
-                print(f"Type 05: data = {data}. "
-                      "This is where the program execution will start. "
-                      "We can ignore this.")
-            else:
-                finished = True
-                raise ValueError(f"Error: Unexpected type ({type_})")
-            line_no += 1
-        return byteList
-
-
-# Contains all available commands.
-class Commands():
-    def __init__(self, helpers: Helpers):
-        self.helpers = helpers
-
-    # Echos any arguments back as a string.
+# Echos any arguments back as a string.
     # Useful for checking that the command system is working.
     def echo(self, args):
         print(args)
@@ -275,18 +125,19 @@ class Commands():
             error, network = self.helpers.get_network_by_id(int(networkId))
             if (error != "OK"):
                 return (False, errStr + error, None)
-            command = self.__getattribute__(callbackFunction)
+            callbackFunction
             network.subscribe(
             can_id=int(messageId,16),
-            callback=lambda x, y, z, c=command, a=[i for i in arguments if i is not None]:
+            callback=lambda x, y, z, c=callbackFunction, a=[i for i in arguments if i is not None]:
                 self.callbackHandler(x, y, z, c, a))
         except Exception as e:
             errStr += f"Failed to map function {callbackFunction} with arguments {[i for i in arguments if i is not None]} to message ID {messageId} on network ID {networkId}:\n{e}"
             return (False, errStr + error, None)
         return (True, "Successfully Mapped Function.", True)
    
-    def callbackHandler(self, x, y, z, function, arguments):
-        function(arguments)
+    def callbackHandler(self, x, y, z, callbackFunction, arguments):
+        func = f"{callbackFunction} {' '.join(arguments)}"
+        self.process_command(func)
 
     # Forcefully searches for nodes on the given or default networkId.
     def search(self, args):
@@ -586,3 +437,146 @@ class Commands():
             print (f"Successfully wrote file to the memory space.")
         except Exception as e:
             print (f"Error in download thread:\n{e}")
+
+    # Adds logLine (Command, Result, Response, Output) to the log
+    # and calls the subscribed callbacks
+    def update_log(self, logLine):
+        self.log.appendleft(logLine)
+        for callback in self.logChangedCallbacks:
+            try:
+                callback()
+            except Exception as e:
+                print(f"Error in log changed callback {callback}:\n{e}")
+
+    # Adds a callback to be called when the log changes.
+    def add_log_changed_callback(self, callback: callable):
+        self.logChangedCallbacks.append(callback)
+
+
+# Contains common operations performed within commands.
+class Helpers():
+    def __init__(self, hwManager: HwManager):
+        self.hwManager = hwManager
+
+    # Checks to see if enough args were provided and returns
+    # and unpackable array based on given mandatory and optional counts.
+    def process_args(self, args: list, mandatory = 0, optional = 0):
+        argsCount = len(args)
+        maxArgs = mandatory + optional
+        args.insert(0, "OK")
+        if (argsCount < mandatory):
+            args[0] = (f"Too few arguments: Expected minimum of {mandatory} "
+                       f"arguments but found {argsCount}.")
+        if (argsCount > maxArgs):
+            args = args[:maxArgs+1]
+            args[0] = (f"Too many arguments: Expected maximum of {maxArgs} "
+                       f"arguments but found {argsCount}.")
+        if (argsCount < maxArgs):
+            fillOptionalArgs = [None] * (maxArgs - (argsCount))
+            args.extend(fillOptionalArgs)
+        return args
+
+    # Tries to get a network by id.
+    def get_network_by_id(self, networkId):
+        # Check to see if a networkId was specified,
+        # if not, use the active network.
+        networkObject = None
+        if (networkId is None):
+            if (self.hwManager.activeNetwork is None):
+                error = "No network specified and no default network assigned."
+                return (error, None)
+            else:
+                networkId = 1
+        try:
+            networkObject = self.hwManager.networkList[networkId-1]
+            return ("OK", networkObject[3])
+        except Exception as e:
+            error = f"Specified network not available.\n{e}"
+            return (error, None)
+
+    # Tries to get a node by id on a given network.
+    def get_node_on_network_by_id(self, network: canopen.Network, nodeId):
+        try:
+            if (len(network.nodes) == 0):
+                # The node wasn't found, warn but try to create the node.
+                network.add_node(1, None)
+            node = network.nodes.get(int(nodeId))
+            return ("OK", node)
+        except Exception:
+            error = "Node not found on given network."
+            return (error, None)
+
+    # Gets the memory info from the given memory identifier.
+    def get_memory_info(self, mem):
+        error = None
+        result = None
+        #                Start    End      Len      Page     Pad   RW    BL_ID
+        match mem:
+            case "app":
+                result = [0x10000, 0x3FFFF, 0x30000, 0x1000,  0xFF, "WO", 0x01]
+            case "appdata":
+                result = [0x40000, 0x41FFF, 0x2000,  0x1000,  0x00, "RW", 0x02]
+            case "proddata":
+                result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x03]
+            case "fram":
+                result = [0x0,     0x01FF,  0x200,   0x200,   0x00, "RW", 0x04]
+            case "default":
+                result = None
+        if not result:
+            error = "Available memories are: APP, APPDATA, PRODDATA, FRAM"
+        return (error, result)
+
+    # Converts the given hexFileContents into byteList;
+    # a dictionary where the indexer is the byte address
+    # and the value is the byte at that address.
+    def hex_file_to_byte_array(self, hexFileContents):
+        hex_code = hexFileContents.split('\n')
+        hex_code_len = len(hex_code)
+        if hex_code_len == 0:
+            raise ValueError("Not enough data: {}".format(hex_code_len))
+        line_no = 0
+        finished = False
+        address_msb = -1
+        tot_byte_count = 0
+        byteList = {}
+        while line_no <= hex_code_len and not finished:
+            line = hex_code[line_no]
+            byte_count = int(line[1:3], 16)
+            address = int(line[3:7], 16)
+            type_ = int(line[7:9], 16)
+            data = line[9:-2]
+            checksum = int(line[-2:], 16)
+            # Handling different types
+            if type_ == 0x00:
+                if address_msb == -1:
+                    error = "Data received before new section started"
+                    raise ValueError(error)
+                byte_address = address_msb + address
+                for byte in range(byte_count):
+                    byte_data = data[byte*2:(byte*2)+2]
+                    byteList[byte_address] = int(byte_data, 16)
+                    byte_address += 1
+                    tot_byte_count += 1
+            elif type_ == 0x01:
+                finished = True
+            elif type_ == 0x02:
+                address_msb = int(data, 16) << 4
+                print(f"Type 02 : data = {data}, "
+                      f"address_msb = {address_msb:08x}")
+            elif type_ == 0x03:
+                print(f"Type 03: Byte count = {byte_count}, "
+                      f"address = {address}, type = {type_}, "
+                      f"data = {data}, checksum = {checksum}")
+            elif type_ == 0x04:
+                address_msb = int(data, 16) << 16
+                print(f"Type 04: data = {data}, "
+                      f"address_msb = {address_msb:08x}")
+            elif type_ == 0x05:
+                print(f"Type 05: data = {data}. "
+                      "This is where the program execution will start. "
+                      "We can ignore this.")
+            else:
+                finished = True
+                raise ValueError(f"Error: Unexpected type ({type_})")
+            line_no += 1
+        return byteList
