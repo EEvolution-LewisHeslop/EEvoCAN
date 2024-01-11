@@ -96,23 +96,7 @@ class CommandSystem():
             errStr += f"Failed to open script file from {filePath}:\n{e}"
             return (False, errStr + error, None)
         return (True, "Script Loaded.", None)
-
-    # # Tries to run a python function with given arguments.
-    # def run(self, args):
-    #     errStr = "Unable to run: "
-    #     # Process arguments.
-    #     args = self.helpers.process_args(args, 1, 11)
-    #     error, function_name, *arguments = args
-    #     if (error != "OK"):
-    #         return (False, errStr + error, None)
-    #     try:
-    #         function = locals()[function_name]
-    #         result = function(arguments)
-    #     except Exception as e:
-    #         errStr += f"Failed to run function {function} with arguments {[i for i in arguments if i is not None]}:\n{e}"
-    #         return (False, errStr + error, None)
-    #     return (True, result, result)
-    
+        
     # Registers a callback on a given network for a given cobid with a given function.
     def map(self, args):
         errStr = "Unable to map function to COBID: "
