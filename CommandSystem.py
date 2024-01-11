@@ -3,9 +3,13 @@ import struct
 from tkinter import filedialog
 import can
 import canopen
+from canopen.objectdictionary import ODVariable
+import os
 from HwManager import HwManager
 from collections import deque
-
+import threading
+import importlib.util
+import sys
 
 # Command System creates commands and helpers
 # and has "process_command" function
@@ -25,13 +29,19 @@ class CommandSystem():
         commandText = commandText.strip()
         commandParts = commandText.split(' ')
         try:
-            commandName = commandParts[0].strip()
+            commandName = commandParts.pop(0).strip()
             command = self.commands.__getattribute__(commandName)
-            commandParts.pop(0)
         except Exception:
             error = f"Unrecognized command: {commandName}"
-            self.update_log((commandText, False, error, None))
-            return
+            try:
+                commandParts.insert(0, "self.commands")
+                func = f"{commandName}({','.join(commandParts)})"
+                exec(func, globals(), locals())
+                return
+            except Exception as e:
+                print(e)
+                self.update_log((commandText, False, error, None))
+                return
         try:
             result, response, output = command(commandParts)
             self.update_log((commandText, result, response, output))
@@ -64,7 +74,7 @@ class Helpers():
 
     # Checks to see if enough args were provided and returns
     # and unpackable array based on given mandatory and optional counts.
-    def process_args(self, args: list, mandatory, optional):
+    def process_args(self, args: list, mandatory = 0, optional = 0):
         argsCount = len(args)
         maxArgs = mandatory + optional
         args.insert(0, "OK")
@@ -75,7 +85,7 @@ class Helpers():
             args = args[:maxArgs+1]
             args[0] = (f"Too many arguments: Expected maximum of {maxArgs} "
                        f"arguments but found {argsCount}.")
-        if (argsCount < mandatory + optional):
+        if (argsCount < maxArgs):
             fillOptionalArgs = [None] * (maxArgs - (argsCount))
             args.extend(fillOptionalArgs)
         return args
@@ -94,8 +104,8 @@ class Helpers():
         try:
             networkObject = self.hwManager.networkList[networkId-1]
             return ("OK", networkObject[3])
-        except Exception:
-            error = "Specified network not available."
+        except Exception as e:
+            error = f"Specified network not available.\n{e}"
             return (error, None)
 
     # Tries to get a node by id on a given network.
@@ -123,7 +133,7 @@ class Helpers():
             case "proddata":
                 result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x03]
             case "fram":
-                result = [0x0,     0x0FFF,  0x1000,  0x1000,  0x00, "RW", 0x04]
+                result = [0x0,     0x01FF,  0x200,   0x200,   0x00, "RW", 0x04]
             case "default":
                 result = None
         if not result:
@@ -194,7 +204,89 @@ class Commands():
     # Echos any arguments back as a string.
     # Useful for checking that the command system is working.
     def echo(self, args):
-        return (True, " ".join(args), " ".join(args))
+        print(args)
+        return (True, " ".join(args), None)
+
+    # Loads a script at a given filepath.
+    def source(self, args):
+        errStr = "Unable to load script: "
+        # Process arguments.
+        args = self.helpers.process_args(args, 1, 0)
+        error, filePath = args
+        if (error != "OK"):
+            return (False, errStr + error, None)
+        # Try to open the file.
+        try:
+            with open(filePath, mode="r", encoding="utf-8") as file:
+                try:
+                    script = file.read()
+                except Exception as e:
+                    errStr += f"Failed to read script file at {filePath}:\n{e}"
+                    return (False, errStr + error, None)
+                try:
+                    """
+                    Dynamically import a Python module from a given filepath and add its functions to globals.
+                    """
+                    fileName = os.path.basename(filePath)
+                    module_name = "_temp_loaded_module"  # Temporary module name
+                    spec = importlib.util.spec_from_file_location(module_name, filePath)
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[module_name] = module
+                    spec.loader.exec_module(module)
+
+                    # Add functions from the module to the globals
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if callable(attr):
+                            globals()[attr_name] = attr
+                except Exception as e:
+                    errStr += f"Failed to execute script file {fileName}:\n{e}"
+                    return (False, errStr + error, None)
+        except Exception as e:
+            errStr += f"Failed to open script file from {filePath}:\n{e}"
+            return (False, errStr + error, None)
+        return (True, "Script Loaded.", None)
+
+    # # Tries to run a python function with given arguments.
+    # def run(self, args):
+    #     errStr = "Unable to run: "
+    #     # Process arguments.
+    #     args = self.helpers.process_args(args, 1, 11)
+    #     error, function_name, *arguments = args
+    #     if (error != "OK"):
+    #         return (False, errStr + error, None)
+    #     try:
+    #         function = locals()[function_name]
+    #         result = function(arguments)
+    #     except Exception as e:
+    #         errStr += f"Failed to run function {function} with arguments {[i for i in arguments if i is not None]}:\n{e}"
+    #         return (False, errStr + error, None)
+    #     return (True, result, result)
+    
+    # Registers a callback on a given network for a given cobid with a given function.
+    def map(self, args):
+        errStr = "Unable to map function to COBID: "
+        # Process arguments.
+        args = self.helpers.process_args(args, 3, 13)
+        error, networkId, messageId, callbackFunction, *arguments = args
+        if (error != "OK"):
+            return (False, errStr + error, None)
+        try:
+            error, network = self.helpers.get_network_by_id(int(networkId))
+            if (error != "OK"):
+                return (False, errStr + error, None)
+            command = self.__getattribute__(callbackFunction)
+            network.subscribe(
+            can_id=int(messageId,16),
+            callback=lambda x, y, z, c=command, a=arguments:
+                self.callbackHandler(x, y, z, c, a))
+        except Exception as e:
+            errStr += f"Failed to map function {callbackFunction} with arguments {[i for i in arguments if i is not None]} to message ID {messageId} on network ID {networkId}:\n{e}"
+            return (False, errStr + error, None)
+        return (True, "Successfully Mapped Function.", True)
+   
+    def callbackHandler(self, x, y, z, function, arguments):
+        function(arguments)
 
     # Forcefully searches for nodes on the given or default networkId.
     def search(self, args):
@@ -369,10 +461,36 @@ class Commands():
         # else save to file. TODO
         return (True, error, output)
 
+    def send(self, args):
+        errStr = "Error sending raw CAN: "
+        # Process arguments.
+        args = self.helpers.process_args(args, 3, 0)
+        error, networkId, messageId, data = args
+        if (error != "OK"):
+            return (False, errStr + error, None)
+        # Convert data to byte array
+        try:
+            bytes = bytearray.fromhex(data)
+        except Exception as e:
+            errStr += f"Failed to convert given bytes to bytearray:\n{e}"
+            return (False, errStr + error, None)
+        # Get the network.
+        error, network = self.helpers.get_network_by_id(int(networkId))
+        if (error != "OK"):
+            return (False, errStr + error, None)
+        # Write the message on the network
+        network:canopen.Network = network
+        try:
+            network.send_message(int(messageId, 16), bytes)
+        except Exception as e:
+            errStr += f"Error trying to send:\n{e}"
+            return (False, errStr + error, None)
+        return (True, "Successfully sent message.", True)
+
     # Offers a file selection prompt and downloads the
     # selected hex file to the controller.
     def download(self, args):
-        errStr = "Download unseccessful: "
+        errStr = "Download unsuccessful: "
         # Process arguments.
         args = self.helpers.process_args(args, 2, 1)
         error, nodeId, memorySpace, networkId = args
@@ -400,50 +518,71 @@ class Commands():
         if (hexfileName is None):
             errStr += "Unable to open file."
             return (False, errStr, None)
-        # Read the file contents.
-        with open(hexfileName) as file:
-            fileContent = file.read()
-        # Convert filecontents to ordered byte value dictionary
-        # with address as key.
-        try:
-            hexByteArray: dict = self.helpers.hex_file_to_byte_array(fileContent)
-        except Exception as e:
-            errStr += f"File was not of hex type: {e}"
-            return (False, errStr, None)
         # Try to send the write ready signal.
         cmd = (blMemId << 8) | 0x0004
         cmd_bytes = bytearray(struct.pack('>H', cmd))
+        cmd_bytes.reverse()
         result, error, output = self.sdo_w(
             [nodeId, 0x5FF0, 1, cmd_bytes, networkId])
         if (not result):
             errStr += (f"Attempt to set memory ({memorySpace}, {blMemId})"
                        f"into write mode (0x04) failed with error: {error}")
             return (False, errStr, None)
-        # Pad out hex array to 4kB boundary.
-        paddedMaxAddr = list(hexByteArray)[-1]
-        while (paddedMaxAddr + 1 - deviceStartAddress) % pageLength != 0:
-            paddedMaxAddr += 1
-            hexByteArray[paddedMaxAddr] = pad
-        # Send the data in 4kB blocks.
-        byteList = []
-        i = list(hexByteArray)[0]
-        while i <= paddedMaxAddr:
-            byteList.append(hexByteArray.get(i, pad))
-            if len(byteList) >= pageLength:
-                data = bytearray(byteList)
-                sdoResponse = self.sdo_w([nodeId, 0x5FF0, 2, data, networkId])
-                result, error, output = sdoResponse
-                if (not result):
-                    errStr += ("Attempt to write Application memory to "
-                               f"domain object failed with error: {error}")
-                    return (False, errStr, None)
-                # Clear byteList for the next 4kB
-                byteList = []
-            i += 1
-        # Check that bytelist is empty now, or else we didn't send everything.
-        if byteList and i != paddedMaxAddr:
-            errStr += "We've not sent all the data to the bootloader"
-            return (False, errStr, None)
-        errStr += (f"Successfully wrote file {hexfileName}"
-                   f"to the memory space {memorySpace}.")
-        return (True, errStr, True)
+
+        # Add the firmware object to the object dictionary.
+        error, network = self.helpers.get_network_by_id(networkId)
+        error, node = self.helpers.get_node_on_network_by_id(network, nodeId)
+        firmwareObject = ODVariable('Firmware', 0x5FF0, 2)
+        node.object_dictionary.add_object(firmwareObject)
+
+        # Read the file contents.
+        with open(hexfileName) as file:
+            fileContent = file.read()
+    
+        time.sleep(3)
+
+        # Create the download thread.
+        thread = threading.Thread(target=self.download_thread, args=[fileContent, deviceStartAddress, pageLength, pad, node])
+        thread.start()
+
+        return (True, "Download started.", True)
+
+    def download_thread(self, fileContent, deviceStartAddress, pageLength, pad, node):
+        try:
+            # Convert filecontents to ordered byte value dictionary
+            # with address as key.
+            try:
+                hexByteArray: dict = self.helpers.hex_file_to_byte_array(fileContent)
+            except Exception as e:
+                print("File was not of hex type.")
+                return
+            ##### Write Ready was here #####
+            #self.send([1, 0x601, 'c2f05f0200100000'])
+            # Pad out hex array to 4kB boundary.
+            paddedMaxAddr = list(hexByteArray)[-1]
+            while (paddedMaxAddr + 1 - deviceStartAddress) % pageLength != 0:
+                paddedMaxAddr += 1
+                hexByteArray[paddedMaxAddr] = pad
+            # Send the data in 4kB blocks.
+            byteList = []
+            i = list(hexByteArray)[0]
+            while i <= paddedMaxAddr:
+                byteList.append(hexByteArray.get(i, pad))
+                if len(byteList) >= pageLength:
+                    data = bytearray(byteList)
+
+                    time.sleep(1)
+                    with node.sdo['Firmware'].open('wb', size=pageLength, block_transfer=True, request_crc_support=False) as outfile:
+                        # Iteratively transfer data without having to read all into memory
+                        outfile.write(data)
+
+                    # Clear byteList for the next 4kB
+                    byteList = []
+                i += 1
+            # Check that bytelist is empty now, or else we didn't send everything.
+            if byteList and i != paddedMaxAddr:
+                print("We've not sent all the data to the bootloader")
+                return
+            print (f"Successfully wrote file to the memory space.")
+        except Exception as e:
+            print (f"Error in download thread:\n{e}")
