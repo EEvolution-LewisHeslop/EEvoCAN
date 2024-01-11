@@ -278,7 +278,7 @@ class Commands():
             command = self.__getattribute__(callbackFunction)
             network.subscribe(
             can_id=int(messageId,16),
-            callback=lambda x, y, z, c=command, a=arguments:
+            callback=lambda x, y, z, c=command, a=[i for i in arguments if i is not None]:
                 self.callbackHandler(x, y, z, c, a))
         except Exception as e:
             errStr += f"Failed to map function {callbackFunction} with arguments {[i for i in arguments if i is not None]} to message ID {messageId} on network ID {networkId}:\n{e}"
