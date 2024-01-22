@@ -26,6 +26,7 @@ class CommandSystem():
         # Basic processing just call a command with args.
         # Currently doesnt handle quotes TODO
         commandText = commandText.strip()
+        commandText = commandText.lower()
         commandParts = commandText.split(' ')
         try:
             commandName = commandParts.pop(0).strip()
@@ -36,27 +37,40 @@ class CommandSystem():
             stringPart = ""
             newParts = []
             for part in commandParts:
-                if isStringPart or part is commandParts[-1]:
-                    if "\"" in part:
-                        isStringPart = False
-                        stringPart += f" {part}"
-                        newParts.append(stringPart)
-                        stringPart = ""
-                    elif isStringPart:
-                        stringPart += f" {part}"
-                    else:
-                        newParts.append(part)
+                # Process parts with hex strings in them.
+                part = str.replace(part, "0x", "")
+
+                # Check to see if the part begins and ends with \".
+                if part.startswith("\"") and part.endswith("\""):
+                    # This is a single part with \" at beginning and end.
+                    part = part.removeprefix("\"")
+                    part = part.removesuffix("\"")
+                    newParts.append(part)
+                # Check to see if this is the beginning of a string.
                 elif part.startswith("\""):
-                    if part.endswith("\""):
-                        newParts.append(part)
-                    else:
-                        isStringPart = True    
-                        stringPart += part
+                    isStringPart = True
+                    part = part.removeprefix("\"")
+                    stringPart += (f"{part}")
+                # Check to see if this is the end of a string.
+                elif part.endswith("\""):
+                    isStringPart = False
+                    part = part.removesuffix("\"")
+                    stringPart += (f" {part}")
+                    newParts.append(stringPart)
+                    stringPart = ""
+                # Check to see if this the middle of a string.
+                elif isStringPart:
+                    stringPart += (f" {part}")
+                # It must be a normal part.
                 else:
                     newParts.append(part)
+            # Check to see if the last stringpart was unclosed.
+            if isStringPart:
+                isStringPart = False
+                newParts.append(stringPart)
+                stringPart = ""
             commandParts = newParts
-            isStringPart = False
-            
+
         except Exception:
             error = f"Unrecognized command: {commandName}"
             try:
@@ -78,7 +92,7 @@ class CommandSystem():
             return (False, error, None)
         return result
 
-# Echos any arguments back as a string.
+    # Echos any arguments back as a string.
     # Useful for checking that the command system is working.
     def echo(self, args):
         print(args)
