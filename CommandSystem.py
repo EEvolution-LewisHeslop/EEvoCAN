@@ -30,6 +30,33 @@ class CommandSystem():
         try:
             commandName = commandParts.pop(0).strip()
             command = self.__getattribute__(commandName)
+            
+            # Process parts with \" in them.
+            isStringPart = False
+            stringPart = ""
+            newParts = []
+            for part in commandParts:
+                if isStringPart or part is commandParts[-1]:
+                    if "\"" in part:
+                        isStringPart = False
+                        stringPart += f" {part}"
+                        newParts.append(stringPart)
+                        stringPart = ""
+                    elif isStringPart:
+                        stringPart += f" {part}"
+                    else:
+                        newParts.append(part)
+                elif part.startswith("\""):
+                    if part.endswith("\""):
+                        newParts.append(part)
+                    else:
+                        isStringPart = True    
+                        stringPart += part
+                else:
+                    newParts.append(part)
+            commandParts = newParts
+            isStringPart = False
+            
         except Exception:
             error = f"Unrecognized command: {commandName}"
             try:
