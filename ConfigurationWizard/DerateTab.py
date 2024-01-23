@@ -4,8 +4,8 @@ from tksheet import Sheet
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
-from Interpolation import Interpolation
-from ResizeHandler import ResizeHandler
+from ConfigurationWizard.Interpolation import Interpolation
+from ConfigurationWizard.ResizeHandler import ResizeHandler
 
 
 # Creates the derate subtabs

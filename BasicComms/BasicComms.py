@@ -1,8 +1,8 @@
 import customtkinter
-from DbcFrame import DbcFrame
-from RawCANFrame import RawCANFrame
-from GaugeFrame import GaugeFrame
-from CliFrame import CliFrame
+from BasicComms.DbcFrame import DbcFrame
+from BasicComms.RawCANFrame import RawCANFrame
+from BasicComms.GaugeFrame import GaugeFrame
+from BasicComms.CliFrame import CliFrame
 from HwManager import HwManager
 from CommandSystem import CommandSystem
 import canopen

@@ -1,6 +1,6 @@
 import customtkinter
 import canopen
-from gaugemod import Gauge
+from BasicComms.gaugemod import Gauge
 import cantools
 
 

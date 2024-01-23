@@ -6,11 +6,11 @@ import time
 
 import FrameBuilder
 import PrefManager
-from HomePage import HomeTab
-from BasicComms import BasicTab
-from ConfigurationWizard import ConfigurationTab
-from SoftwareLoader import SoftwareTab
-from TestInterface import TestInterfaceTab
+from HomePage import HomePage
+from BasicComms import BasicComms
+from ConfigurationWizard import ConfigurationWizard
+from SoftwareLoader import SoftwareLoader
+from TestInterface import TestInterface
 from HwManager import HwManager
 from CommandSystem import CommandSystem
 
@@ -115,26 +115,26 @@ class MainTabView(customtkinter.CTkTabview):
         FrameBuilder.tab_builder(
             self,
             title="Home",
-            tabContent=HomeTab)
+            tabContent=HomePage.HomeTab)
         FrameBuilder.tab_builder(
             self,
             title="Basic Comms",
-            tabContent=BasicTab,
+            tabContent=BasicComms.BasicTab,
             hwManager=hwManager,
             commandSystem=commandSystem)
         FrameBuilder.tab_builder(
             self,
             title="Configuration Wizard",
-            tabContent=ConfigurationTab)
+            tabContent=ConfigurationWizard.ConfigurationTab)
         FrameBuilder.tab_builder(
             self,
             title="Software Loader",
-            tabContent=SoftwareTab,
+            tabContent=SoftwareLoader.SoftwareTab,
             commandSystem=commandSystem)
         FrameBuilder.tab_builder(
             self,
             title="Test Interfaces",
-            tabContent=TestInterfaceTab)
+            tabContent=TestInterface.TestInterfaceTab)
         # Select the home tab
         self.set("Home")
 

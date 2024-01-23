@@ -2,9 +2,9 @@ import os
 from tkinter import filedialog
 import customtkinter
 from tksheet import Sheet
-from ParameterTab import ParameterTab
-from Interpolation import Interpolation
-from DerateTab import DerateTab
+from ConfigurationWizard.ParameterTab import ParameterTab
+from ConfigurationWizard.Interpolation import Interpolation
+from ConfigurationWizard.DerateTab import DerateTab
 
 
 # Creates the configuration tab
@@ -188,7 +188,7 @@ class ConfigurationTab(customtkinter.CTkFrame):
 
     # Grabs the data from the configuration tabs and collates it.
     def get_config(self):
-        from ParameterTab import DataTypesEnum
+        from ConfigurationWizard.ParameterTab import DataTypesEnum
         chargeDerateTable = self.tabView.chargeTab.table.get_sheet_data()
         chargeTempRange = self.tabView.chargeTab.table.MT._headers
         chargeSocRange = self.tabView.chargeTab.table.MT._row_index

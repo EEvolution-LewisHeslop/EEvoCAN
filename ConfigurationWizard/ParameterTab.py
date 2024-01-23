@@ -1,8 +1,8 @@
 import customtkinter
 from CTkTable import CTkTable
 
-from ResizeHandler import ResizeHandler
-from Interpolation import Interpolation
+from ConfigurationWizard.ResizeHandler import ResizeHandler
+from ConfigurationWizard.Interpolation import Interpolation
 
 from enum import Enum
 DataTypesEnum = Enum(
