@@ -1,0 +1,21 @@
+{
+    "KL15 Output": {
+        "type": "digital_output",
+        "name": "KL15",
+        "default": "off"
+    },
+    "KL30 Output": {
+        "type": "digital_output",
+        "name": "KL15",
+        "default": "off"
+    },
+    "KL31 Output": {
+        "type": "digital_output",
+        "name": "KL31",
+        "default": "on"
+    },
+    "Drive Available": {
+        "type": "digital_input",
+        "name": "Drive Available"
+    }
+}

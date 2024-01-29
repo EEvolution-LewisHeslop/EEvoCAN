@@ -82,9 +82,8 @@ class RawCANListener(Listener):
         self.scrollToBottom = scrollToBottom
 
     def on_message_received(self, msg: Message) -> None:
-        self.led.to_green(True)
-        time.sleep(0.02)
         try:
+            self.led.to_green(True)
             self.text.configure(state='normal')
             self.text.insert('end', str(msg).strip().replace('  ', ' ')+"\n")
             self.text.configure(state='disabled')
