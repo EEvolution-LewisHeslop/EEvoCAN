@@ -11,6 +11,7 @@ from BasicComms import BasicComms
 from ConfigurationWizard import ConfigurationWizard
 from SoftwareLoader import SoftwareLoader
 from TestInterface import TestInterface
+from CellMonitor import CellMonitor
 from HwManager import HwManager
 from CommandSystem import CommandSystem
 
@@ -135,9 +136,14 @@ class MainTabView(customtkinter.CTkTabview):
             self,
             title="Test Interfaces",
             tabContent=TestInterface.TestInterfaceTab)
+        FrameBuilder.tab_builder(
+            self,
+            title="Cell Monitor",
+            tabContent=CellMonitor.CellMonitorTab,
+            hwManager=hwManager,
+            commandSystem=commandSystem)
         # Select the home tab
         self.set("Home")
-
 
 # Main Application Startup Logic
 hwManager = HwManager()

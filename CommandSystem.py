@@ -38,7 +38,11 @@ class CommandSystem():
             newParts = []
             for part in commandParts:
                 # Process parts with hex strings in them.
-                part = str.replace(part, "0x", "")
+                try:
+                    if "0x" in part:
+                        part = int(part, base=16)
+                except Exception as e:
+                    part = str.replace(part, "0x", "")
 
                 # Check to see if the part begins and ends with \".
                 if part.startswith("\"") and part.endswith("\""):
@@ -306,35 +310,51 @@ class CommandSystem():
         if not memInfo:
             return (False, errStr + error, None)
         # Assign read variables from meminfo.
-        # deviceStartAddress = memInfo[0]
+        deviceStartAddress = memInfo[0]
         # deviceEndAddress = memInfo[1]
         # deviceLength = memInfo[2]
-        # pageLength = memInfo[3]
-        # pad = memInfo[4]
+        pageLength = memInfo[3]
+        #pad = memInfo[4]
         access = memInfo[5]
         blMemId = memInfo[6]
         # Check read access.
         if (access != "RO" and access != "RW"):
             return (False, errStr + "Unable to read this memory space!", None)
+        
+        # Prompt for filename to save as
+        outFile = filedialog.asksaveasfile()
+
+        # Add the firmware object to the object dictionary.
+        error, network = self.helpers.get_network_by_id(networkId)
+        error, node = self.helpers.get_node_on_network_by_id(network, nodeId)
+        firmwareObject = ODVariable('Firmware', 0x5FF0, 2)
+        node.object_dictionary.add_object(firmwareObject)
+
         # Set read ready signal in application.
         cmd = (blMemId << 8) | 0x0005
         cmd_bytes = bytearray(struct.pack('>H', cmd))
+        cmd_bytes.reverse()
         result, error, output = self.sdo_w(
             [nodeId, 0x5FF0, 1, cmd_bytes, networkId])
         if (not result):
-            return result, errStr + error
+            return result, errStr + error, None
         # Read the domain as a block of bytes.
-        result, error, output = self.sdo_r([nodeId, 0x5FF0, 2])
-        if (not result):
-            return result, errStr + error
-        # The first 4 bytes is the length of the data.
-        expLength = output[0:3]
-        dataBytes = output[4:]
-        actLength = len(dataBytes)
-        print(f"Expected amount of data = {expLength}, "
-              f"actual amount of data = {actLength}")
-        # If no filename is passed, just return the output,
-        # else save to file. TODO
+
+        # Create the Upload Thread.
+        thread = threading.Thread(target=self.upload_thread, args=[outFile, pageLength, node])
+        thread.start()
+
+        # result, error, output = self.sdo_r([nodeId, "0x5FF0", 2])
+        # if (not result):
+        #     return result, errStr + error
+        # # The first 4 bytes is the length of the data.
+        # expLength = output[0:3]
+        # dataBytes = output[4:]
+        # actLength = len(dataBytes)
+        # print(f"Expected amount of data = {expLength}, "
+        #       f"actual amount of data = {actLength}")
+        # # If no filename is passed, just return the output,
+        # # else save to file. TODO
         return (True, error, output)
 
     def send(self, args):
@@ -357,7 +377,7 @@ class CommandSystem():
         # Write the message on the network
         network:canopen.Network = network
         try:
-            network.send_message(int(messageId, 16), bytes)
+            network.send_message(messageId, bytes)
         except Exception as e:
             errStr += f"Error trying to send:\n{e}"
             return (False, errStr + error, None)
@@ -422,6 +442,16 @@ class CommandSystem():
         thread.start()
 
         return (True, "Download started.", True)
+
+    def upload_thread(self, filePath, pageLength, node):
+        try: 
+            data = []
+            # Open a datastream to read the data from.
+            with node.sdo['Firmware'].open('rb', size=pageLength, block_transfer=True, request_crc_support=False) as infile:
+                data.append(infile.read())
+            print (data)
+        except Exception as e:
+            print(e)
 
     def download_thread(self, fileContent, deviceStartAddress, pageLength, pad, node):
         try:
@@ -539,16 +569,24 @@ class Helpers():
         match mem:
             case "app":
                 result = [0x10000, 0x3FFFF, 0x30000, 0x1000,  0xFF, "WO", 0x01]
-            case "appdata":
-                result = [0x40000, 0x41FFF, 0x2000,  0x1000,  0x00, "RW", 0x02]
+            case "tbls_prod":   
+                result = [0x40000, 0x47FFF, 0x8000,  0x1000,  0xFF, "RW", 0x02]
+            case "tbls_cust": 
+                result = [0x48000, 0x4FFFF, 0x8000,  0x1000,  0xFF, "RW", 0x03]
+            case "def1":
+                result = [0x50000, 0x53FFF, 0x4000,  0x1000,  0xFF, "RW", 0x04]
+            case "def2":
+                result = [0x54000, 0x57FFF, 0x4000,  0x1000,  0xFF, "RW", 0x05]
+            case "chgs": 
+                result = [0x58000, 0x7EFFF, 0x27000, 0x1000,  0xFF, "RW", 0x06]
             case "proddata":
-                result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x03]
+                result = [0x7F000, 0x7FFFF, 0x1000,  0x1000,  0x00, "RW", 0x07]
             case "fram":
-                result = [0x0,     0x01FF,  0x200,   0x200,   0x00, "RW", 0x04]
+                result = [0x0,     0x01FF,  0x200,   0x200,   0x00, "RW", 0x08]
             case "default":
                 result = None
         if not result:
-            error = "Available memories are: APP, APPDATA, PRODDATA, FRAM"
+            error = "Available memories are: APP, TBLS_PROD, TBLS_CUST, DEF1, DEF2, CHGS, PRODDATA, FRAM"
         return (error, result)
 
     # Converts the given hexFileContents into byteList;
